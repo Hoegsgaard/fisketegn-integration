@@ -51,7 +51,7 @@ public class routerTest extends RouteBuilder {
       .routeId("direct-route")
       .tracing()
       .log(">>> ${body.id}")
-      .log(">>> ${body.name}")
+      //.log(">>> ${body.name}")
       .process(new Processor() {
         public void process(Exchange exchange) throws Exception {
           MyBean bodyIn = (MyBean) exchange.getIn().getBody();

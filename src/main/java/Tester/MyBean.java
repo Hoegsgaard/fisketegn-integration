@@ -1,7 +1,5 @@
 package Tester;
 
-import io.swagger.models.auth.In;
-
 public class MyBean {
   private Integer id;
   private String name;
