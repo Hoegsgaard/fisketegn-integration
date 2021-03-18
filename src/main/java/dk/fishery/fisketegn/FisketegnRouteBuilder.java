@@ -1,4 +1,4 @@
-package Tester;
+package dk.fishery.fisketegn;
 
 import org.apache.camel.CamelContext;
 import org.apache.camel.Exchange;
@@ -12,9 +12,9 @@ import javax.ws.rs.core.MediaType;
 
 
 @Component
-public class routerTest extends RouteBuilder {
+public class FisketegnRouteBuilder extends RouteBuilder {
 
-  @Value("${baeldung.api.path}")
+  @Value("${fisketegn.api.path}")
   String contextPath;
 
   @Value("${server.port}")
@@ -29,7 +29,7 @@ public class routerTest extends RouteBuilder {
       .port(serverPort)
       .enableCORS(true)
       .apiContextPath("/api-doc")
-      .apiProperty("api.title", "test rest api")
+      .apiProperty("api.title", "rest api")
       .apiProperty("api.version", "v1")
       .apiProperty("cors", "true")
       .apiContextRouteId("doc-api")
@@ -37,7 +37,7 @@ public class routerTest extends RouteBuilder {
       .bindingMode(RestBindingMode.json)
       .dataFormatProperty("prettyPrint", "true");
 
-      rest("/api/").description("Tester Rest")
+      rest("/api/").description("dk.fishery.SpringBootStarter Rest")
       .id("api-route")
       .post("/bean")
       .produces(MediaType.APPLICATION_JSON)
@@ -48,10 +48,9 @@ public class routerTest extends RouteBuilder {
       .to("direct:remoteService");
 
       from("direct:remoteService")
+      .streamCaching()
       .routeId("direct-route")
       .tracing()
-      .log(">>> ${body.id}")
-      //.log(">>> ${body.name}")
       .process(new Processor() {
         public void process(Exchange exchange) throws Exception {
           MyBean bodyIn = (MyBean) exchange.getIn().getBody();
@@ -59,6 +58,8 @@ public class routerTest extends RouteBuilder {
           exchange.getIn().setBody(bodyIn);
         }
       })
+      //.log(">>> ${body.name}")
+      .log(">>> ${body.id}")
       .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(201));
     }
 }

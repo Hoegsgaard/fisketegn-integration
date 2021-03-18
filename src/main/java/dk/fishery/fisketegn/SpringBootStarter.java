@@ -1,4 +1,4 @@
-package Tester;
+package dk.fishery.fisketegn;
 
 import org.apache.camel.component.servlet.CamelHttpTransportServlet;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,13 +12,13 @@ import org.springframework.boot.web.servlet.ServletRegistrationBean;
 import org.springframework.context.annotation.Bean;
 
 @SpringBootApplication(exclude = {WebSocketServletAutoConfiguration.class, AopAutoConfiguration.class, OAuth2ResourceServerAutoConfiguration.class, EmbeddedWebServerFactoryCustomizerAutoConfiguration.class})
-public class Tester {
+public class SpringBootStarter {
 
-    @Value("${baeldung.api.path}")
+    @Value("${fisketegn.api.path}")
     String contextPath;
 
     public static void main(String[] args) {
-        SpringApplication.run(Tester.class, args);
+        SpringApplication.run(SpringBootStarter.class, args);
     }
 
     @Bean

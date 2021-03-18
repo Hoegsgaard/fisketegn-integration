@@ -1,4 +1,4 @@
-package Tester;
+package dk.fishery.fisketegn;
 
 public class MyBean {
   private Integer id;

@@ -79,7 +79,7 @@
     <build>
         <defaultGoal>spring-boot:run</defaultGoal>
 
-       <plugins>
+       <!--<plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
@@ -91,7 +91,7 @@
                     </execution>
                 </executions>
             </plugin>
-        </plugins>
+        </plugins>-->
     </build>
 
 </project>
