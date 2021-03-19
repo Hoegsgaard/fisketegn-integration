@@ -2,10 +2,7 @@ package dk.fishery.fisketegn;
 
 import com.mongodb.client.model.Filters;
 import dk.fishery.fisketegn.model.User;
-import org.apache.camel.CamelContext;
-import org.apache.camel.Exchange;
-import org.apache.camel.Expression;
-import org.apache.camel.Processor;
+import org.apache.camel.*;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mongodb.MongoDbConstants;
 import org.apache.camel.impl.DefaultCamelContext;
@@ -28,6 +25,12 @@ public class FisketegnRouteBuilder extends RouteBuilder {
     @Override
     public void configure() throws Exception {
       CamelContext context = new DefaultCamelContext();
+
+      onException(RuntimeCamelException.class)
+              .log("Camel exception!")
+              .handled(true)
+              .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
+              .setBody(simple("camel exception!"));
 
       restConfiguration()
       .contextPath(contextPath)
