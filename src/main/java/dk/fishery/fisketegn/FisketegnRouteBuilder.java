@@ -37,6 +37,19 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       .bindingMode(RestBindingMode.json)
       .dataFormatProperty("prettyPrint", "true");
 
+
+      rest("/db/").description("database test")
+              .id("db-route")
+              .get()
+              .to("direct:mongoRoute");
+
+      from("direct:mongoRoute")
+              .streamCaching()
+              .setBody(simple(""))
+              .to("mongodb:fisketegnDb?database=test&collection=testCollection&operation=findAll")
+              .setHeader("Content-Type",constant("application/json; charset=UTF-8"));
+
+
       rest("/api/").description("dk.fishery.SpringBootStarter Rest")
       .id("api-route")
       .post("/bean")
