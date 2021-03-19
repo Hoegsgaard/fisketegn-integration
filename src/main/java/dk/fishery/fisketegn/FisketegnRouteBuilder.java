@@ -43,11 +43,17 @@ public class FisketegnRouteBuilder extends RouteBuilder {
               .get()
               .to("direct:mongoRoute");
 
-      from("direct:mongoRoute")
+      /*from("direct:mongoRoute")
               .streamCaching()
               .setBody(simple(""))
               .to("mongodb:fisketegnDb?database=test&collection=testCollection&operation=findAll")
+              .setHeader("Content-Type",constant("application/json; charset=UTF-8"));*/
+      from("direct:mongoRoute")
+              .streamCaching()
+              .setBody(simple(""))
+              .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=findAll")
               .setHeader("Content-Type",constant("application/json; charset=UTF-8"));
+
 
 
       rest("/api/").description("dk.fishery.SpringBootStarter Rest")
