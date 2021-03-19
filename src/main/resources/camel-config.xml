@@ -11,6 +11,12 @@
       http://www.springframework.org/schema/beans/spring-beans.xsd">
 
     <bean class="com.mongodb.MongoClient" id="fisketegnDb">
-        <constructor-arg index="0" value="localhost:27017"/>
+        <!--<constructor-arg index="0" value="localhost:27017"/>-->
+        <constructor-arg>
+            <ref bean="fisketegnDbURI"/>
+        </constructor-arg>
+    </bean>
+    <bean class="com.mongodb.MongoClientURI" id="fisketegnDbURI">
+        <constructor-arg name="uri" value="mongodb+srv://fisketegn:fiskepassword@fiskecluster.1org3.mongodb.net/Fisketegn?retryWrites=true&amp;w=majority"/>
     </bean>
 </beans>
