@@ -3,11 +3,14 @@ package dk.fishery.fisketegn;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Filters;
 import dk.fishery.fisketegn.model.User;
+import dk.fishery.fisketegn.processors.checkPassword;
+import dk.fishery.fisketegn.processors.hashPassword;
 import org.apache.camel.*;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mongodb.CamelMongoDbException;
 import org.apache.camel.component.mongodb.MongoDbConstants;
 import org.apache.camel.impl.DefaultCamelContext;
+import org.apache.camel.language.xpath.XPathBuilder;
 import org.apache.camel.model.rest.RestBindingMode;
 import org.bson.conversions.Bson;
 import org.springframework.beans.factory.annotation.Value;
@@ -90,6 +93,11 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       .type(User.class)
       .to("direct:findOrCreateUser")
 
+      .post("/login")
+      .type(User.class)
+      .to("direct:doesUserExist")
+
+
       .post("/bean")
       .type(MyBean.class)
       .to("direct:remoteService");
@@ -97,6 +105,7 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       from("direct:findOrCreateUser")
       .streamCaching()
       .routeId("findOrCreateUser")
+      .setProperty("oldBody", simple("${body}"))
       .process(
               new Processor() {
                 @Override
@@ -108,36 +117,57 @@ public class FisketegnRouteBuilder extends RouteBuilder {
                 }
               })
       .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=findAll")
-              .process(new Processor() {
-                @Override
-                public void process(Exchange exchange) throws Exception {
-
-                }
-              })
       .choice()
         .when(header(RESULT_PAGE_SIZE).isGreaterThan(0))
-              .log("Hallo mander, så virker det bare")
+              .log("Bruger eksistere")
               // .to("direct:payment")
-              //    .to("direct:createLicense")
+              // .to("direct:createLicense")
         .otherwise()
-              .log("ØV")
-      .end();
-      //   .to("direct:createUser")
+          .log("Bruger eksistere endnu ikke")
+          .to("direct:createUser");
 
-        ;
-
-      //from("direct:payment");
-
-    //  from("direct:createUser")
-       // .to("direct:payment")
-        // .transform() or .process() password til Hash
+      from("direct:createUser")
+        //.to("direct:payment")
+        .process(new hashPassword())
         // Gem bruger i DB
-      //  .to("direct:createLicense");
+        .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=insert");
+        //.to("direct:createLicense");
 
      // from("direct:createLicense")
         // Opret fisketegn til brugeren
         // Retuner fisketegn til brugeren
         // Send fisketegn på mail, måske en .process();
+
+      //from("direct:payment");
+
+      from("direct:doesUserExist")
+      .setProperty("oldBody", simple("${body}"))
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) throws Exception {
+          User user = exchange.getIn().getBody(User.class);
+          String email = user.getEmail();
+          Bson criteria = Filters.eq("email", email);
+          exchange.getIn().setHeader(MongoDbConstants.CRITERIA, criteria);
+        }
+      })
+      .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=findAll")
+      .choice()
+        .when(header(RESULT_PAGE_SIZE).isGreaterThan(0))
+        .log("Bruger eksisterer")
+        .process(new checkPassword())
+        .choice()
+          .when(body().isEqualTo(true))
+            .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
+            .setBody(simple("User is authenticated"))
+          .otherwise()
+            .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
+            .setBody(simple("Wrong username or password"))
+        .otherwise()
+          .log("Bruger eksistere endnu ikke")
+          .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
+          .setBody(simple("Wrong username or password"));
+
 
       from("direct:remoteService")
       .streamCaching()

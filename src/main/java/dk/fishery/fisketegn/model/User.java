@@ -16,7 +16,7 @@ public class User {
   private String country;
   private String type;
   private boolean highQuality;
-  private Date startDate;
+  private String startDate;
   private String password;
 
   public String getCpr() {return cpr;}
@@ -43,8 +43,8 @@ public class User {
   public void setType(String type) {this.type = type;}
   public boolean isHighQuality() {return highQuality;}
   public void setHighQuality(boolean highQuality) {this.highQuality = highQuality; }
-  public Date getStartDate() {return startDate;}
-  public void setStartDate(Date startDate) {this.startDate = startDate; }
+  public String getStartDate() {return startDate;}
+  public void setStartDate(String startDate) {this.startDate = startDate; }
   public String getPassword() { return password; }
   public void setPassword(String password) { this.password = password; }
 }
