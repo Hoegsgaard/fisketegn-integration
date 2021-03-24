@@ -11,6 +11,7 @@ import org.bson.conversions.Bson;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import javax.ws.rs.core.MediaType;
+import java.io.IOException;
 
 
 @Component
@@ -94,7 +95,39 @@ public class FisketegnRouteBuilder extends RouteBuilder {
           return exchange.getContext().getTypeConverter().convertTo(type, criteria);
         }
       })
-      .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=findOneByQuery");
+      .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=findOneByQuery")
+      .process(new Processor() {
+        public void process(Exchange exchange) throws Exception {
+          User user = (User) exchange.getIn().getBody();
+          if (user != null) {
+            exchange.setProperty("userExists", true);
+          } else {
+            exchange.setProperty("userExists", false);
+          }
+        }
+      })
+      .choice()
+        .when(simple("${property.userExists} == true"))
+          .log("Hallo mander, så virker det bare")
+         // .to("direct:payment")
+      //    .to("direct:createLicense")
+        .otherwise()
+          .log("ØV")
+       //   .to("direct:createUser")
+        ;
+
+      //from("direct:payment");
+
+    //  from("direct:createUser")
+       // .to("direct:payment")
+        // .transform() or .process() password til Hash
+        // Gem bruger i DB
+      //  .to("direct:createLicense");
+
+     // from("direct:createLicense")
+        // Opret fisketegn til brugeren
+        // Retuner fisketegn til brugeren
+        // Send fisketegn på mail, måske en .process();
 
       from("direct:remoteService")
       .streamCaching()
