@@ -12,6 +12,7 @@ public class checkPassword implements Processor {
     BasicDBObject DbUser = exchange.getIn().getBody(BasicDBObject.class);
     User user = (User) exchange.getProperty("oldBody");
     boolean passwordIsCorrect = BCrypt.checkpw(user.getPassword(), DbUser.getString("password"));
-    exchange.getIn().setBody(passwordIsCorrect);
+    exchange.setProperty("userAuth", passwordIsCorrect);
+    exchange.getIn().setBody(DbUser);
   }
 }

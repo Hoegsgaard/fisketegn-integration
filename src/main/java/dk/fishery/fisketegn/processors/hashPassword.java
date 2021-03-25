@@ -14,8 +14,4 @@ public class hashPassword implements Processor {
     user.setPassword(hashedPassword);
     exchange.getIn().setBody(user);
   }
-
-  public void tester(Exchange exchange) throws Exception {
-
-  }
 }

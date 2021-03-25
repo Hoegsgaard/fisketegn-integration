@@ -18,6 +18,7 @@ public class User {
   private boolean highQuality;
   private String startDate;
   private String password;
+  private String role;
 
   public String getCpr() {return cpr;}
   public void setCpr(String cpr) {this.cpr = cpr;}
@@ -47,4 +48,6 @@ public class User {
   public void setStartDate(String startDate) {this.startDate = startDate; }
   public String getPassword() { return password; }
   public void setPassword(String password) { this.password = password; }
+  public String getRole() {return role; }
+  public void setRole(String role) {this.role = role; }
 }

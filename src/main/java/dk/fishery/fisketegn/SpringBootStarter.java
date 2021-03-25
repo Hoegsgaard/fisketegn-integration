@@ -16,9 +16,6 @@ import org.springframework.context.annotation.ImportResource;
 @ImportResource({"classpath:camel-config.xml"})
 public class SpringBootStarter {
 
-    @Value("${fisketegn.api.path}")
-    String contextPath;
-
     public static void main(String[] args) {
         SpringApplication.run(SpringBootStarter.class, args);
     }

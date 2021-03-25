@@ -4,7 +4,9 @@ import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Filters;
 import dk.fishery.fisketegn.model.User;
 import dk.fishery.fisketegn.processors.checkPassword;
+import dk.fishery.fisketegn.processors.generateToken;
 import dk.fishery.fisketegn.processors.hashPassword;
+import dk.fishery.fisketegn.processors.validateToken;
 import org.apache.camel.*;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mongodb.CamelMongoDbException;
@@ -28,6 +30,9 @@ public class FisketegnRouteBuilder extends RouteBuilder {
 
   @Value("${server.port}")
   String serverPort;
+
+  @Value("${jwtSecure.key}")
+  String jwtKey;
 
     @Override
     public void configure() throws Exception {
@@ -58,30 +63,6 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       .bindingMode(RestBindingMode.json)
       .dataFormatProperty("prettyPrint", "true");
 
-
-      rest("/db/").description("database test")
-              .id("db-route")
-              .get()
-              .to("direct:mongoRoute")
-
-              .post()
-              .to("direct:insert");
-      /*from("direct:mongoRoute")
-              .streamCaching()
-              .setBody(simple(""))
-              .to("mongodb:fisketegnDb?database=test&collection=testCollection&operation=findAll")
-              .setHeader("Content-Type",constant("application/json; charset=UTF-8"));*/
-      from("direct:insert")
-        .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=insert");
-
-      from("direct:mongoRoute")
-              .streamCaching()
-              .setBody(simple(""))
-              .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=findAll")
-              .setHeader("Content-Type",constant("application/json; charset=UTF-8"));
-
-
-
       rest("/api/").description("dk.fishery.SpringBootStarter Rest")
       .id("api-route")
       .enableCORS(true)
@@ -97,15 +78,18 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       .type(User.class)
       .to("direct:doesUserExist")
 
+      .post("/validateToken")
+      .to("direct:validateToken");
 
-      .post("/bean")
-      .type(MyBean.class)
-      .to("direct:remoteService");
+      from("direct:validateToken")
+      .setProperty("tokenKey", constant(jwtKey))
+      .process(new validateToken());
 
       from("direct:findOrCreateUser")
       .streamCaching()
       .routeId("findOrCreateUser")
       .setProperty("oldBody", simple("${body}"))
+      .setProperty("tokenKey", constant(jwtKey))
       .process(
               new Processor() {
                 @Override
@@ -119,7 +103,9 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=findAll")
       .choice()
         .when(header(RESULT_PAGE_SIZE).isGreaterThan(0))
+          .setProperty("newUser", simple("${body}"))
               .log("Bruger eksistere")
+              .process(new generateToken())
               // .to("direct:payment")
               // .to("direct:createLicense")
         .otherwise()
@@ -130,7 +116,8 @@ public class FisketegnRouteBuilder extends RouteBuilder {
         //.to("direct:payment")
         .process(new hashPassword())
         // Gem bruger i DB
-        .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=insert");
+        .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=insert")
+        .process(new generateToken());
         //.to("direct:createLicense");
 
      // from("direct:createLicense")
@@ -142,6 +129,7 @@ public class FisketegnRouteBuilder extends RouteBuilder {
 
       from("direct:doesUserExist")
       .setProperty("oldBody", simple("${body}"))
+      .setProperty("tokenKey", constant(jwtKey))
       .process(new Processor() {
         @Override
         public void process(Exchange exchange) throws Exception {
@@ -152,14 +140,15 @@ public class FisketegnRouteBuilder extends RouteBuilder {
         }
       })
       .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=findAll")
+      .setProperty("newBody", simple("${body}"))
       .choice()
         .when(header(RESULT_PAGE_SIZE).isGreaterThan(0))
         .log("Bruger eksisterer")
         .process(new checkPassword())
         .choice()
-          .when(body().isEqualTo(true))
+          .when(exchangeProperty("userAuth").isEqualTo(true))
+            .process(new generateToken())
             .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
-            .setBody(simple("User is authenticated"))
           .otherwise()
             .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
             .setBody(simple("Wrong username or password"))
@@ -167,22 +156,6 @@ public class FisketegnRouteBuilder extends RouteBuilder {
           .log("Bruger eksistere endnu ikke")
           .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
           .setBody(simple("Wrong username or password"));
-
-
-      from("direct:remoteService")
-      .streamCaching()
-      .routeId("direct-route")
-      .tracing()
-      .process(new Processor() {
-        public void process(Exchange exchange) throws Exception {
-          MyBean bodyIn = (MyBean) exchange.getIn().getBody();
-          ExampleServices.example(bodyIn);
-          exchange.getIn().setBody(bodyIn);
-        }
-      })
-      //.log(">>> ${body.name}")
-      .log(">>> ${body.id}")
-      .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(201));
     }
 }
 
