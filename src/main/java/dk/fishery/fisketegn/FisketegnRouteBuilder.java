@@ -3,10 +3,8 @@ package dk.fishery.fisketegn;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Filters;
 import dk.fishery.fisketegn.model.User;
-import dk.fishery.fisketegn.processors.checkPassword;
-import dk.fishery.fisketegn.processors.generateToken;
-import dk.fishery.fisketegn.processors.hashPassword;
-import dk.fishery.fisketegn.processors.validateToken;
+import dk.fishery.fisketegn.processors.*;
+import io.swagger.util.Json;
 import org.apache.camel.*;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mongodb.CamelMongoDbException;
@@ -19,6 +17,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import javax.ws.rs.core.MediaType;
 import java.io.IOException;
+import java.util.LinkedHashMap;
 
 import static org.apache.camel.component.mongodb.MongoDbConstants.RESULT_PAGE_SIZE;
 
@@ -68,7 +67,7 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       .enableCORS(true)
       .produces(MediaType.APPLICATION_JSON)
       .consumes(MediaType.APPLICATION_JSON)
-      .bindingMode(RestBindingMode.auto)
+      .bindingMode(RestBindingMode.json)
 
       .post("/buyLicense")
       .type(User.class)
@@ -79,11 +78,40 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       .to("direct:doesUserExist")
 
       .post("/validateToken")
-      .to("direct:validateToken");
+      .to("direct:validateToken")
 
-      from("direct:validateToken")
+      .post("/updatePassword")
+      .to("direct:updatePassword");
+
+      from("direct:updatePassword")
       .setProperty("tokenKey", constant(jwtKey))
-      .process(new validateToken());
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) throws Exception {
+          LinkedHashMap<String,String> password = exchange.getIn().getBody(LinkedHashMap.class);
+          exchange.setProperty("newPassword",password.get("password"));
+        }
+      })
+      .process(new validateToken())
+      .choice()
+        .when(exchangeProperty("tokenIsValidated").isEqualTo(true))
+          .process(
+          new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+              String email = (String) exchange.getProperty("userEmail");
+              Bson criteria = Filters.eq("email", email);
+              exchange.getIn().setHeader(MongoDbConstants.CRITERIA, criteria);
+            }
+          })
+          .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=findAll")
+          .process(new updatePassword())
+          .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=save")
+          .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
+          .setBody(simple("Password is updated"))
+        .otherwise()
+          .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
+          .setBody(simple("Token invalid"));
 
       from("direct:findOrCreateUser")
       .streamCaching()
@@ -156,6 +184,11 @@ public class FisketegnRouteBuilder extends RouteBuilder {
           .log("Bruger eksistere endnu ikke")
           .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
           .setBody(simple("Wrong username or password"));
+
+      from("direct:validateToken")
+      .setProperty("tokenKey", constant(jwtKey))
+      .process(new validateToken());
+
     }
 }
 
