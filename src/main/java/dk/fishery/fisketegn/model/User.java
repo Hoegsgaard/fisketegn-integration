@@ -1,7 +1,5 @@
 package dk.fishery.fisketegn.model;
 
-import java.util.Date;
-
 public class User {
 
   private String cpr;
@@ -14,7 +12,6 @@ public class User {
   private String address;
   private String zipCode;
   private String country;
-  private String type;
   private boolean highQuality;
   private String startDate;
   private String password;
@@ -40,8 +37,6 @@ public class User {
   public void setZipCode(String zipCode) {this.zipCode = zipCode;}
   public String getCountry() {return country;}
   public void setCountry(String country) {this.country = country;}
-  public String getType() {return type;}
-  public void setType(String type) {this.type = type;}
   public boolean isHighQuality() {return highQuality;}
   public void setHighQuality(boolean highQuality) {this.highQuality = highQuality; }
   public String getStartDate() {return startDate;}

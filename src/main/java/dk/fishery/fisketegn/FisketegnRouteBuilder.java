@@ -62,6 +62,7 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       .bindingMode(RestBindingMode.json)
       .dataFormatProperty("prettyPrint", "true");
 
+
       rest("/api/").description("dk.fishery.SpringBootStarter Rest")
       .id("api-route")
       .enableCORS(true)
@@ -81,10 +82,16 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       .to("direct:validateToken")
 
       .post("/updatePassword")
-      .to("direct:updatePassword");
+      .to("direct:updatePassword")
+
+      .put("/user")
+      .type(User.class)
+      .to("direct:updateUser")
+
+      .get("/user")
+      .to("direct:getUser");
 
       from("direct:updatePassword")
-      .setProperty("tokenKey", constant(jwtKey))
       .process(new Processor() {
         @Override
         public void process(Exchange exchange) throws Exception {
@@ -92,6 +99,7 @@ public class FisketegnRouteBuilder extends RouteBuilder {
           exchange.setProperty("newPassword",password.get("password"));
         }
       })
+      .setProperty("tokenKey", constant(jwtKey))
       .process(new validateToken())
       .choice()
         .when(exchangeProperty("tokenIsValidated").isEqualTo(true))
@@ -118,6 +126,7 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       .routeId("findOrCreateUser")
       .setProperty("oldBody", simple("${body}"))
       .setProperty("tokenKey", constant(jwtKey))
+      // HUSK AT TRÆKKE FISKETEGNSTYPE UD
       .process(
               new Processor() {
                 @Override
@@ -155,6 +164,68 @@ public class FisketegnRouteBuilder extends RouteBuilder {
 
       //from("direct:payment");
 
+
+      from("direct:updateUser")
+      .setProperty("tokenKey", constant(jwtKey))
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) throws Exception {
+          User user = exchange.getIn().getBody(User.class);
+          exchange.setProperty("user", user);
+        }
+      })
+      .process(new validateToken())
+      .choice()
+      .when(exchangeProperty("tokenIsValidated").isEqualTo(true))
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) throws Exception {
+            exchange.getIn().setBody(exchange.getProperty("user"));
+          }
+        })
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) throws Exception {
+            String email = (String) exchange.getProperty("userEmail");
+            Bson criteria = Filters.eq("email", email);
+            exchange.getIn().setHeader(MongoDbConstants.CRITERIA, criteria);
+          }
+        })
+      .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=findAll")
+      .process(new updateUserProcess())
+      .setProperty("newUser", simple("${body}"))
+      .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=save")
+      .setBody(exchangeProperty("newUser"))
+      .process(new generateToken());
+
+
+
+      from("direct:getUser")
+      .setProperty("tokenKey", constant(jwtKey))
+      .process( new validateToken())
+      .choice()
+        .when(exchangeProperty("tokenIsValidated").isEqualTo(true))
+      .process(
+          new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+              String email = (String) exchange.getProperty("userEmail");
+              Bson criteria = Filters.eq("email", email);
+              exchange.getIn().setHeader(MongoDbConstants.CRITERIA, criteria);
+            }
+          })
+          .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=findAll")
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+              BasicDBObject user = exchange.getIn().getBody(BasicDBObject.class);
+              user.removeField("password");
+              user.removeField("role");
+              user.removeField("_id");
+              exchange.getIn().setBody(user);
+            }
+          });
+
       from("direct:doesUserExist")
       .setProperty("oldBody", simple("${body}"))
       .setProperty("tokenKey", constant(jwtKey))
@@ -188,7 +259,6 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       from("direct:validateToken")
       .setProperty("tokenKey", constant(jwtKey))
       .process(new validateToken());
-
     }
 }
 

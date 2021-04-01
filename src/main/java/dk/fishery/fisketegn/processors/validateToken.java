@@ -6,8 +6,10 @@ import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.Jwts;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
+import org.springframework.beans.factory.annotation.Value;
 
 public class validateToken implements Processor {
+
   @Override
   public void process(Exchange exchange) throws Exception {
     String tokenKey = (String) exchange.getProperty("tokenKey");
