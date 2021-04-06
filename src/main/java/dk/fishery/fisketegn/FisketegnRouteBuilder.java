@@ -6,6 +6,7 @@ import dk.fishery.fisketegn.model.User;
 import dk.fishery.fisketegn.processors.*;
 import io.swagger.util.Json;
 import org.apache.camel.*;
+import org.apache.camel.builder.PredicateBuilder;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mongodb.CamelMongoDbException;
 import org.apache.camel.component.mongodb.MongoDbConstants;
@@ -312,14 +313,21 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       // GET USER
       from("direct:adminGetUser")
       .setProperty("tokenKey", constant(jwtKey))
-      .setProperty("userEmail", simple("${body}"))
-      .process( new validateAdmin())
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) throws Exception {
+          LinkedHashMap<String,String> usersEmail = exchange.getIn().getBody(LinkedHashMap.class);
+          exchange.setProperty("usersEmail",usersEmail.get("email"));
+        }
+      })
+      .process( new validateTokenProcessor())
       .choice()
-        .when(exchangeProperty("AdminIsValidated").isEqualTo(true))
+        .when(PredicateBuilder.and(exchangeProperty("tokenIsValidated").isEqualTo(true),
+        exchangeProperty("userRole").isEqualTo("admin")))
           .process(new Processor() {
             @Override
             public void process(Exchange exchange) throws Exception {
-              String email = (String) exchange.getProperty("userEmail");
+              String email = (String) exchange.getProperty("usersEmail");
               Bson criteria = Filters.eq("email", email);
               exchange.getIn().setHeader(MongoDbConstants.CRITERIA, criteria);
             }
@@ -334,7 +342,14 @@ public class FisketegnRouteBuilder extends RouteBuilder {
               user.removeField("_id");
               exchange.getIn().setBody(user);
             }
-          });
+          })
+      .otherwise()
+        .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) throws Exception {
+            System.out.println("kdkd");
+          }
+        });
 
 
 
