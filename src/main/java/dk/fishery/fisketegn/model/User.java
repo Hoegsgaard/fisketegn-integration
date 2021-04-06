@@ -14,9 +14,12 @@ public class User {
   private String address;
   private String zipCode;
   private String country;
-  private ArrayList<String> licenses;
+  private boolean highQuality;
+  private String startDate;
   private String password;
   private String role;
+  private String type;
+  private ArrayList<String> licenses = new ArrayList<>();
 
   public String getCpr() {return cpr;}
   public void setCpr(String cpr) {this.cpr = cpr;}
@@ -38,10 +41,16 @@ public class User {
   public void setZipCode(String zipCode) {this.zipCode = zipCode;}
   public String getCountry() {return country;}
   public void setCountry(String country) {this.country = country;}
+  public boolean isHighQuality() {return highQuality;}
+  public void setHighQuality(boolean highQuality) {this.highQuality = highQuality; }
+  public String getStartDate() {return startDate;}
+  public void setStartDate(String startDate) {this.startDate = startDate; }
   public String getPassword() { return password; }
   public void setPassword(String password) { this.password = password; }
   public String getRole() {return role; }
   public void setRole(String role) {this.role = role; }
   public ArrayList<String> getLicenses() {return licenses;}
   public void addLicense(String license) {this.licenses.add(license);}
+  public String getType() {return type;}
+  public void setType(String type) {this.type = type;}
 }
