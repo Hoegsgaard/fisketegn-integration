@@ -278,14 +278,9 @@ public class FisketegnRouteBuilder extends RouteBuilder {
               .setBody(simple("User do not exsist"))
               .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401));
 
+      // UPDATE PASSWORD
       from("direct:updatePassword")
-      .process(new Processor() {
-        @Override
-        public void process(Exchange exchange) throws Exception {
-          LinkedHashMap<String,String> password = exchange.getIn().getBody(LinkedHashMap.class);
-          exchange.setProperty("newPassword",password.get("password"));
-        }
-      })
+      .process(new savePropertyProcessor())
       .setProperty("tokenKey", constant(jwtKey))
       .process(new validateTokenProcessor())
       .choice()
@@ -313,13 +308,7 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       // GET USER
       from("direct:adminGetUser")
       .setProperty("tokenKey", constant(jwtKey))
-      .process(new Processor() {
-        @Override
-        public void process(Exchange exchange) throws Exception {
-          LinkedHashMap<String,String> usersEmail = exchange.getIn().getBody(LinkedHashMap.class);
-          exchange.setProperty("usersEmail",usersEmail.get("email"));
-        }
-      })
+      .process(new savePropertyProcessor())
       .process( new validateTokenProcessor())
       .choice()
         .when(PredicateBuilder.and(exchangeProperty("tokenIsValidated").isEqualTo(true),
@@ -342,14 +331,7 @@ public class FisketegnRouteBuilder extends RouteBuilder {
               user.removeField("_id");
               exchange.getIn().setBody(user);
             }
-          })
-      .otherwise()
-        .process(new Processor() {
-          @Override
-          public void process(Exchange exchange) throws Exception {
-            System.out.println("kdkd");
-          }
-        });
+          });
 
 
 
