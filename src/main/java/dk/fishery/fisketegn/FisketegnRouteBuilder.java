@@ -98,7 +98,7 @@ public class FisketegnRouteBuilder extends RouteBuilder {
 
       // Admin
 
-      
+
 
       // Auth Endpoints
       from("direct:validateToken")
@@ -118,22 +118,24 @@ public class FisketegnRouteBuilder extends RouteBuilder {
         }
       })
       .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=findAll")
+
       .setProperty("newBody", simple("${body}"))
       .choice()
-      .when(header(RESULT_PAGE_SIZE).isGreaterThan(0))
-      .log("Bruger eksisterer")
-      .process(new checkPassword())
-      .choice()
-      .when(exchangeProperty("userAuth").isEqualTo(true))
-      .process(new generateToken())
-      .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
-      .otherwise()
-      .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
-      .setBody(simple("Wrong username or password"))
-      .otherwise()
-      .log("Bruger eksistere endnu ikke")
-      .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
-      .setBody(simple("Wrong username or password"));
+        .when(header(RESULT_PAGE_SIZE).isGreaterThan(0))
+          .log("Bruger eksisterer")
+          .process(new checkPassword())
+          .choice()
+            .when(exchangeProperty("userAuth").isEqualTo(true))
+              .process(new generateToken())
+              .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
+            .otherwise()
+              .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
+              .setBody(simple("Wrong username or password"))
+          .endChoice()
+        .otherwise()
+          .log("Bruger eksistere endnu ikke")
+          .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
+          .setBody(simple("User dont exist"));
 
       // FIND OR CREATE USER
       from("direct:findOrCreateUser")
@@ -247,32 +249,31 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       .setProperty("tokenKey", constant(jwtKey))
       .process(new validateToken())
       .choice()
-      .when(exchangeProperty("tokenIsValidated").isEqualTo(true))
-      .process(
-      new Processor() {
-        @Override
-        public void process(Exchange exchange) throws Exception {
-          String email = (String) exchange.getProperty("userEmail");
-          Bson criteria = Filters.eq("email", email);
-          exchange.getIn().setHeader(MongoDbConstants.CRITERIA, criteria);
-        }
-      })
-      .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=findAll")
-      .choice()
-      .when(header(RESULT_PAGE_SIZE).isGreaterThan(0))
-      .process(new Processor() {
-        @Override
-        public void process(Exchange exchange) throws Exception {
-          BasicDBObject user = exchange.getIn().getBody(BasicDBObject.class);
-          exchange.getIn().setBody(user);
-        }
-      })
-      .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=remove")
-      .setBody(simple("User deleted"))
-      .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
-      .otherwise()
-      .setBody(simple("User do not exsist"))
-      .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401));
+        .when(exchangeProperty("tokenIsValidated").isEqualTo(true))
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+              String email = (String) exchange.getProperty("userEmail");
+              Bson criteria = Filters.eq("email", email);
+              exchange.getIn().setHeader(MongoDbConstants.CRITERIA, criteria);
+            }
+          })
+          .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=findAll")
+          .choice()
+            .when(header(RESULT_PAGE_SIZE).isGreaterThan(0))
+              .process(new Processor() {
+                @Override
+                public void process(Exchange exchange) throws Exception {
+                  BasicDBObject user = exchange.getIn().getBody(BasicDBObject.class);
+                  exchange.getIn().setBody(user);
+                }
+              })
+              .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=remove")
+              .setBody(simple("User deleted"))
+              .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
+            .otherwise()
+              .setBody(simple("User do not exsist"))
+              .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401));
 
       from("direct:updatePassword")
       .process(new Processor() {
