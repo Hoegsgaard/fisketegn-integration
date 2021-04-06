@@ -97,7 +97,10 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       .to("direct:updatePassword");
 
       // Admin
+      rest("/api/admin/")
 
+      .post("/getUser")
+      .to("direct:adminGetUser");
 
 
       // Auth Endpoints
@@ -143,7 +146,6 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       .routeId("findOrCreateUser")
       .setProperty("oldBody", simple("${body}"))
       .setProperty("tokenKey", constant(jwtKey))
-      // HUSK AT TRÆKKE FISKETEGNSTYPE UD
       .process(
       new Processor() {
         @Override
@@ -306,6 +308,33 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       .setBody(simple("Token invalid"));
 
       // Admin Endpoints
+
+      // GET USER
+      from("direct:adminGetUser")
+      .setProperty("tokenKey", constant(jwtKey))
+      .setProperty("userEmail", simple("${body}"))
+      .process( new validateAdmin())
+      .choice()
+        .when(exchangeProperty("AdminIsValidated").isEqualTo(true))
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+              String email = (String) exchange.getProperty("userEmail");
+              Bson criteria = Filters.eq("email", email);
+              exchange.getIn().setHeader(MongoDbConstants.CRITERIA, criteria);
+            }
+          })
+          .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=findAll")
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+              BasicDBObject user = exchange.getIn().getBody(BasicDBObject.class);
+              user.removeField("password");
+              user.removeField("role");
+              user.removeField("_id");
+              exchange.getIn().setBody(user);
+            }
+          });
 
 
 
