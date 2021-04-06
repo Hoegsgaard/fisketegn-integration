@@ -89,7 +89,10 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       .to("direct:updateUser")
 
       .get("/user")
-      .to("direct:getUser");
+      .to("direct:getUser")
+
+      .delete("/user")
+      .to("direct:deleteUser");
 
       from("direct:updatePassword")
       .process(new Processor() {
@@ -225,6 +228,37 @@ public class FisketegnRouteBuilder extends RouteBuilder {
               exchange.getIn().setBody(user);
             }
           });
+
+      from("direct:deleteUser")
+      .setProperty("tokenKey", constant(jwtKey))
+      .process(new validateToken())
+      .choice()
+        .when(exchangeProperty("tokenIsValidated").isEqualTo(true))
+          .process(
+          new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+              String email = (String) exchange.getProperty("userEmail");
+              Bson criteria = Filters.eq("email", email);
+              exchange.getIn().setHeader(MongoDbConstants.CRITERIA, criteria);
+            }
+          })
+          .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=findAll")
+          .choice()
+            .when(header(RESULT_PAGE_SIZE).isGreaterThan(0))
+              .process(new Processor() {
+                @Override
+                public void process(Exchange exchange) throws Exception {
+                  BasicDBObject user = exchange.getIn().getBody(BasicDBObject.class);
+                  exchange.getIn().setBody(user);
+                }
+              })
+              .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=remove")
+              .setBody(simple("User deleted"))
+              .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
+            .otherwise()
+              .setBody(simple("User do not exsist"))
+              .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401));
 
       from("direct:doesUserExist")
       .setProperty("oldBody", simple("${body}"))
