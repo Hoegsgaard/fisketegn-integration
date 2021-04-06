@@ -6,7 +6,7 @@ import org.apache.camel.Processor;
 import org.mindrot.jbcrypt.BCrypt;
 import java.util.LinkedHashMap;
 
-public class updatePassword implements Processor {
+public class updatePasswordProcessor implements Processor {
   @Override
   public void process(Exchange exchange) throws Exception {
     String newPassword = (String) exchange.getProperty("newPassword");

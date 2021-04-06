@@ -5,7 +5,7 @@ import dk.fishery.fisketegn.model.User;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 
-public class updateUserProcess implements Processor {
+public class updateUserProcessor implements Processor {
   @Override
   public void process(Exchange exchange) throws Exception {
     BasicDBObject input = exchange.getIn().getBody(BasicDBObject.class);
@@ -20,8 +20,6 @@ public class updateUserProcess implements Processor {
     input.put("address", newUserInfo.getAddress());
     input.put("zipCode", newUserInfo.getZipCode());
     input.put("country",newUserInfo.getCountry());
-    input.put("highQuality", newUserInfo.isHighQuality());
-    input.put("startDate",newUserInfo.getStartDate());
     exchange.getIn().setBody(input);
   }
 }

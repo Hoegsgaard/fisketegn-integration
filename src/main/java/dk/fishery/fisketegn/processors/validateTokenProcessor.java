@@ -8,7 +8,7 @@ import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.springframework.beans.factory.annotation.Value;
 
-public class validateToken implements Processor {
+public class validateTokenProcessor implements Processor {
 
   @Override
   public void process(Exchange exchange) throws Exception {

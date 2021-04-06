@@ -103,7 +103,7 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       // Auth Endpoints
       from("direct:validateToken")
       .setProperty("tokenKey", constant(jwtKey))
-      .process(new validateToken());
+      .process(new validateTokenProcessor());
 
       from("direct:doesUserExist")
       .setProperty("oldBody", simple("${body}"))
@@ -123,10 +123,10 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       .choice()
         .when(header(RESULT_PAGE_SIZE).isGreaterThan(0))
           .log("Bruger eksisterer")
-          .process(new checkPassword())
+          .process(new checkPasswordProcessor())
           .choice()
             .when(exchangeProperty("userAuth").isEqualTo(true))
-              .process(new generateToken())
+              .process(new generateTokenProcessor())
               .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
             .otherwise()
               .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
@@ -159,7 +159,7 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       .when(header(RESULT_PAGE_SIZE).isGreaterThan(0))
       .setProperty("newUser", simple("${body}"))
       .log("Bruger eksistere")
-      .process(new generateToken())
+      .process(new generateTokenProcessor())
       // .to("direct:payment")
       // .to("direct:createLicense")
       .otherwise()
@@ -168,10 +168,10 @@ public class FisketegnRouteBuilder extends RouteBuilder {
 
       from("direct:createUser")
       //.to("direct:payment")
-      .process(new hashPassword())
+      .process(new hashPasswordProcessor())
       // Gem bruger i DB
       .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=insert")
-      .process(new generateToken());
+      .process(new generateTokenProcessor());
       //.to("direct:createLicense");
 
       // from("direct:createLicense")
@@ -193,7 +193,7 @@ public class FisketegnRouteBuilder extends RouteBuilder {
           exchange.setProperty("user", user);
         }
       })
-      .process(new validateToken())
+      .process(new validateTokenProcessor())
       .choice()
       .when(exchangeProperty("tokenIsValidated").isEqualTo(true))
       .process(new Processor() {
@@ -211,16 +211,16 @@ public class FisketegnRouteBuilder extends RouteBuilder {
         }
       })
       .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=findAll")
-      .process(new updateUserProcess())
+      .process(new updateUserProcessor())
       .setProperty("newUser", simple("${body}"))
       .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=save")
       .setBody(exchangeProperty("newUser"))
-      .process(new generateToken());
+      .process(new generateTokenProcessor());
 
       // GET USER
       from("direct:getUser")
       .setProperty("tokenKey", constant(jwtKey))
-      .process( new validateToken())
+      .process( new validateTokenProcessor())
       .choice()
       .when(exchangeProperty("tokenIsValidated").isEqualTo(true))
       .process(
@@ -247,7 +247,7 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       // DELETE USER
       from("direct:deleteUser")
       .setProperty("tokenKey", constant(jwtKey))
-      .process(new validateToken())
+      .process(new validateTokenProcessor())
       .choice()
         .when(exchangeProperty("tokenIsValidated").isEqualTo(true))
           .process(new Processor() {
@@ -284,7 +284,7 @@ public class FisketegnRouteBuilder extends RouteBuilder {
         }
       })
       .setProperty("tokenKey", constant(jwtKey))
-      .process(new validateToken())
+      .process(new validateTokenProcessor())
       .choice()
       .when(exchangeProperty("tokenIsValidated").isEqualTo(true))
       .process(
@@ -297,7 +297,7 @@ public class FisketegnRouteBuilder extends RouteBuilder {
         }
       })
       .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=findAll")
-      .process(new updatePassword())
+      .process(new updatePasswordProcessor())
       .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=save")
       .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
       .setBody(simple("Password is updated"))
