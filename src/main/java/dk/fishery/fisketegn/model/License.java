@@ -9,5 +9,78 @@ public class License {
     private String originalStartDate;
     private boolean status; //true = active, false = inactive
     private boolean deletedFlag = false;
+
+    public String getLicenseID() {
+        return licenseID;
+    }
+
+    public void setLicenseID(String licenseID) {
+        this.licenseID = licenseID;
+    }
+
+    public String getLicenseNumber() {
+        return licenseNumber;
+    }
+
+    public void setLicenseNumber(String licenseNumber) {
+        this.licenseNumber = licenseNumber;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
+    }
+
+    public boolean isHighQuality() {
+        return highQuality;
+    }
+
+    public void setHighQuality(boolean highQuality) {
+        this.highQuality = highQuality;
+    }
+
+    public String getStartDate() {
+        return startDate;
+    }
+
+    public void setStartDate(String startDate) {
+        this.startDate = startDate;
+    }
+
+    public String getOriginalStartDate() {
+        return originalStartDate;
+    }
+
+    public void setOriginalStartDate(String originalStartDate) {
+        this.originalStartDate = originalStartDate;
+    }
+
+    public boolean isStatus() {
+        return status;
+    }
+
+    public void setStatus(boolean status) {
+        this.status = status;
+    }
+
+    public boolean isDeletedFlag() {
+        return deletedFlag;
+    }
+
+    public void setDeletedFlag(boolean deletedFlag) {
+        this.deletedFlag = deletedFlag;
+    }
+
+    public boolean isGroupLicenseFlag() {
+        return groupLicenseFlag;
+    }
+
+    public void setGroupLicenseFlag(boolean groupLicenseFlag) {
+        this.groupLicenseFlag = groupLicenseFlag;
+    }
+
     private boolean groupLicenseFlag;
 }

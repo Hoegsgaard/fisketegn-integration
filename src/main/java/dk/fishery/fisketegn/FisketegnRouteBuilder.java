@@ -2,6 +2,7 @@ package dk.fishery.fisketegn;
 
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Filters;
+import dk.fishery.fisketegn.model.License;
 import dk.fishery.fisketegn.model.User;
 import dk.fishery.fisketegn.processors.*;
 import io.swagger.util.Json;
@@ -18,6 +19,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import javax.ws.rs.core.MediaType;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 
 import static org.apache.camel.component.mongodb.MongoDbConstants.RESULT_PAGE_SIZE;
@@ -164,7 +166,7 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       .log("Bruger eksistere")
       .process(new generateTokenProcessor())
       // .to("direct:payment")
-      // .to("direct:createLicense")
+       .to("direct:createLicense")
       .otherwise()
       .log("Bruger eksistere endnu ikke")
       .to("direct:createUser");
@@ -174,10 +176,38 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       .process(new hashPasswordProcessor())
       // Gem bruger i DB
       .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=insert")
-      .process(new generateTokenProcessor());
-      //.to("direct:createLicense");
+      .process(new generateTokenProcessor())
+      .to("direct:createLicense");
 
-      // from("direct:createLicense")
+      from("direct:createLicense")
+      .process(new createLicenseProcessor())
+      .to("mongodb:fisketegnDb?database=Fisketegn&collection=Licenses&operation=insert")
+      .process(
+              new Processor() {
+                @Override
+                public void process(Exchange exchange) throws Exception {
+                  User input = (User) exchange.getProperty("oldBody");
+                  Bson criteria = Filters.eq("email", input.getEmail());
+                  exchange.getIn().setHeader(MongoDbConstants.CRITERIA, criteria);
+                }
+              })
+      .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=findAll")
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) throws Exception {
+          BasicDBObject user = exchange.getIn().getBody(BasicDBObject.class);
+          ArrayList<String> licenses = (ArrayList<String>) user.get("licenses");
+          if(licenses == null){
+            licenses = new ArrayList<>();
+          }
+          licenses.add((String) exchange.getProperty("licenseID"));
+          user.put("licenses", licenses);
+          //user.addLicense((String) exchange.getProperty("licenseID"));
+          exchange.getIn().setBody(user);
+        }
+      })
+      .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=save");
+
       // Opret fisketegn til brugeren
       // Retuner fisketegn til brugeren
       // Send fisketegn på mail, måske en .process();
