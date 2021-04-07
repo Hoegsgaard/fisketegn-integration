@@ -20,6 +20,7 @@ public class User {
   private String role;
   private String type;
   private ArrayList<String> licenses = new ArrayList<>();
+  private String oldEmail;
 
   public String getCpr() {return cpr;}
   public void setCpr(String cpr) {this.cpr = cpr;}
@@ -53,4 +54,6 @@ public class User {
   public void addLicense(String license) {this.licenses.add(license);}
   public String getType() {return type;}
   public void setType(String type) {this.type = type;}
+  public String getOldEmail() {return oldEmail;}
+  public void setOldEmail(String oldEmail) {this.oldEmail = oldEmail;}
 }
