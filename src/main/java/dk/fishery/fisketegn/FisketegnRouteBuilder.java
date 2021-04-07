@@ -107,7 +107,10 @@ public class FisketegnRouteBuilder extends RouteBuilder {
 
       .put("/User")
       .type(User.class)
-      .to("direct:adminUpdateUser");
+      .to("direct:adminUpdateUser")
+
+      .put("User/role")
+      .to("direct:adminUpdateUserRole");
 
 
       // Auth Endpoints
@@ -406,14 +409,38 @@ public class FisketegnRouteBuilder extends RouteBuilder {
           .setBody(exchangeProperty("newUser"))
           .process(new generateTokenProcessor())
         .otherwise()
+          .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
+          .setBody(simple("Kunne ikke finde bruger"));
+
+      from("direct:adminUpdateUserRole")
+      .setProperty("tokenKey", constant(jwtKey))
+      .process(new validateTokenProcessor())
+      .choice()
+        .when(PredicateBuilder.and(exchangeProperty("tokenIsValidated").isEqualTo(true),
+          exchangeProperty("userRole").isEqualTo("admin")))
+          .process(new savePropertyProcessor())
           .process(new Processor() {
             @Override
             public void process(Exchange exchange) throws Exception {
-              System.out.println("HEk");
+              String email = (String) exchange.getProperty("usersEmail");
+              Bson criteria = Filters.eq("email", email);
+              exchange.getIn().setHeader(MongoDbConstants.CRITERIA, criteria);
             }
-          });
+          })
+          .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=findAll")
+          .choice()
+            .when(header(RESULT_PAGE_SIZE).isGreaterThan(0))
+            .process(new updateRoleProcessor())
+            .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=save")
+          .otherwise()
+            .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
+            .setBody(simple("Kunne ikke finde bruger"));
 
 
+
+
+
+      ;
 
     }
 }

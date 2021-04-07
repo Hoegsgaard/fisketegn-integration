@@ -11,5 +11,6 @@ public class savePropertyProcessor implements Processor {
     LinkedHashMap<String,String> prop = exchange.getIn().getBody(LinkedHashMap.class);
     exchange.setProperty("usersEmail",prop.get("email"));
     exchange.setProperty("newPassword",prop.get("password"));
+    exchange.setProperty("newRole",prop.get("role"));
   }
 }
