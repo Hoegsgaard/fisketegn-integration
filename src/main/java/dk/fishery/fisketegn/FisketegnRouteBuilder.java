@@ -97,7 +97,10 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       .to("direct:deleteUser")
 
       .post("/updatePassword")
-      .to("direct:updatePassword");
+      .to("direct:updatePassword")
+
+      .get("license")
+      .to("direct:getLicense");
 
       // Admin
       rest("/api/admin/")
@@ -339,6 +342,59 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       .otherwise()
       .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
       .setBody(simple("Token invalid"));
+
+      from("direct:getLicense")
+      .setProperty("tokenKey", constant(jwtKey))
+      .process(new validateTokenProcessor())
+      .choice()
+        .when(exchangeProperty("tokenIsValidated").isEqualTo(true))
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+              String email = (String) exchange.getProperty("userEmail");
+              Bson criteria = Filters.eq("email", email);
+              exchange.getIn().setHeader(MongoDbConstants.CRITERIA, criteria);
+            }
+          })
+          .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=findAll")
+          .choice()
+            .when(header(RESULT_PAGE_SIZE).isGreaterThan(0))
+              .process(new getLicenseProcessor())
+              .process(new Processor() {
+                @Override
+                public void process(Exchange exchange) throws Exception {
+                  ArrayList<Bson> bsons = (ArrayList<Bson>) exchange.getProperty("bsons");
+                  Bson criteria = Filters.or(bsons);
+                  exchange.getIn().setHeader(MongoDbConstants.CRITERIA, criteria);
+                }
+              })
+              .to("mongodb:fisketegnDb?database=Fisketegn&collection=Licenses&operation=findAll")
+              .choice()
+                .when(header(RESULT_PAGE_SIZE).isGreaterThan(0))
+                  .process(new Processor() {
+                    @Override
+                    public void process(Exchange exchange) throws Exception {
+                      ArrayList<BasicDBObject> licensesList = exchange.getIn().getBody(ArrayList.class);
+                      for(int i = 0; i < licensesList.size(); i++){
+                        BasicDBObject license = new BasicDBObject(licensesList.get(i));
+                        license.removeField("_id");
+                        licensesList.set(i, license);
+                      }
+                      exchange.getIn().setBody(licensesList);
+                    }
+                  })
+                .otherwise()
+                  .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
+                  .setBody(simple("Endnu ingen fisketegn"))
+              .endChoice()
+            .otherwise()
+              .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
+              .setBody(simple("Kunne ikke finde bruger"));
+
+
+
+
+
 
       // Admin Endpoints
 
