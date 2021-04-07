@@ -102,8 +102,12 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       // Admin
       rest("/api/admin/")
 
-      .post("/getUser")
-      .to("direct:adminGetUser");
+      .get("/User")
+      .to("direct:adminGetUser")
+
+      .put("/User")
+      .type(User.class)
+      .to("direct:adminUpdateUser");
 
 
       // Auth Endpoints
@@ -360,6 +364,52 @@ public class FisketegnRouteBuilder extends RouteBuilder {
               user.removeField("role");
               user.removeField("_id");
               exchange.getIn().setBody(user);
+            }
+          });
+
+
+      // UPDATE USER
+      from("direct:adminUpdateUser")
+      .setProperty("tokenKey", constant(jwtKey))
+      .process(new validateTokenProcessor())
+      .choice()
+        .when(PredicateBuilder.and(exchangeProperty("tokenIsValidated").isEqualTo(true),
+          exchangeProperty("userRole").isEqualTo("admin")))
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+              User user = exchange.getIn().getBody(User.class);
+              exchange.setProperty("user", user);
+              exchange.setProperty("usersEmail", user.getOldEmail());
+            }
+          })
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+              exchange.getIn().setBody(exchange.getProperty("user"));
+            }
+          })
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+              String email = (String) exchange.getProperty("usersEmail");
+              Bson criteria = Filters.eq("email", email);
+              exchange.getIn().setHeader(MongoDbConstants.CRITERIA, criteria);
+            }
+          })
+      .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=findAll")
+      .choice()
+        .when(header(RESULT_PAGE_SIZE).isGreaterThan(0))
+          .process(new updateUserProcessor())
+          .setProperty("newUser", simple("${body}"))
+          .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=save")
+          .setBody(exchangeProperty("newUser"))
+          .process(new generateTokenProcessor())
+        .otherwise()
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+              System.out.println("HEk");
             }
           });
 
