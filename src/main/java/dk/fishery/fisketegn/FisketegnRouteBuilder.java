@@ -118,7 +118,10 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       .to("direct:adminUpdateUser")
 
       .put("User/role")
-      .to("direct:adminUpdateUserRole");
+      .to("direct:adminUpdateUserRole")
+
+      .put("refund")
+      .to("direct:flagLicense");
 
 
       // Auth Endpoints
@@ -544,11 +547,33 @@ public class FisketegnRouteBuilder extends RouteBuilder {
             .setBody(simple("Kunne ikke finde bruger"));
 
 
-
-
-
-      ;
-
+      from("direct:flagLicense")
+      .setProperty("tokenKey", constant(jwtKey))
+      .process(new validateTokenProcessor())
+      .choice()
+        .when(PredicateBuilder.and(exchangeProperty("tokenIsValidated").isEqualTo(true),
+          exchangeProperty("userRole").isEqualTo("admin")))
+          .process(new savePropertyProcessor())
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+              String licenseID = (String) exchange.getProperty("licenseID");
+              Bson criteria = Filters.eq("licenseID", licenseID);
+              exchange.getIn().setHeader(MongoDbConstants.CRITERIA, criteria);
+            }
+          })
+          .to("mongodb:fisketegnDb?database=Fisketegn&collection=Licenses&operation=findAll")
+          .choice()
+            .when(header(RESULT_PAGE_SIZE).isGreaterThan(0))
+              .process(new FlagLicenseDeletedProcessor())
+              .to("mongodb:fisketegnDb?database=Fisketegn&collection=Licenses&operation=save")
+            .otherwise()
+              .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
+              .setBody(simple("Kunne ikke finde fisketegn"))
+          .endChoice()
+        .otherwise()
+          .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
+          .setBody(simple("access denied"));
     }
 }
 

@@ -12,5 +12,6 @@ public class savePropertyProcessor implements Processor {
     exchange.setProperty("usersEmail",prop.get("email"));
     exchange.setProperty("newPassword",prop.get("password"));
     exchange.setProperty("newRole",prop.get("role"));
+    exchange.setProperty("licenseID",prop.get("licenseID"));
   }
 }
