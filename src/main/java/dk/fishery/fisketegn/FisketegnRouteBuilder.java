@@ -21,6 +21,7 @@ import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 
 import static org.apache.camel.component.mongodb.MongoDbConstants.RESULT_PAGE_SIZE;
 
@@ -84,6 +85,10 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       .post("/buyLicense")
       .type(User.class)
       .to("direct:findOrCreateUser")
+
+      .post("/updateLicense")
+      //.type(User.class)
+      .to("direct:updateLicense")
 
       // USER
       .put("/user")
@@ -217,6 +222,52 @@ public class FisketegnRouteBuilder extends RouteBuilder {
         }
       })
       .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=save");
+
+      from("direct:updateLicense")
+              //validate user
+              .setProperty("tokenKey", constant(jwtKey))
+              .setProperty("licenseID", simple("${body}"))
+              .process(new validateTokenProcessor())
+              .choice()
+              .when(exchangeProperty("tokenIsValidated").isEqualTo(true))
+              //get user info
+              .process(new Processor() {
+                @Override
+                public void process(Exchange exchange) throws Exception {
+                  String email = (String) exchange.getProperty("userEmail");
+                  Bson criteria = Filters.eq("email", email);
+                  exchange.getIn().setHeader(MongoDbConstants.CRITERIA, criteria);
+                }
+              })
+              .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=findAll")
+              .process(new Processor() {
+                @Override
+                public void process(Exchange exchange) throws Exception {
+                  ArrayList listOfUsers = exchange.getIn().getBody(ArrayList.class);
+                  exchange.setProperty("user", listOfUsers.get(0));
+                  LinkedHashMap<String,String> prop = (LinkedHashMap) exchange.getProperty("licenseID");
+                  String licenseID = prop.get("licenseID");
+                  Bson criteria = Filters.eq("licenseID", licenseID);
+                  exchange.getIn().setHeader(MongoDbConstants.CRITERIA, criteria);
+                }
+              })
+              .to("mongodb:fisketegnDb?database=Fisketegn&collection=Licenses&operation=findAll")
+              .process(new updateLicenseProcessor())
+              .process(new Processor() {
+                @Override
+                public void process(Exchange exchange) throws Exception {
+                  LinkedHashMap<String,String> prop = (LinkedHashMap) exchange.getProperty("licenseID");
+                  String licenseID = prop.get("licenseID");
+                  Bson criteria = Filters.eq("licenseID", licenseID);
+                  exchange.getIn().setHeader(MongoDbConstants.CRITERIA, criteria);
+                }
+              })
+              .to("mongodb:fisketegnDb?database=Fisketegn&collection=Licenses&operation=save")
+              .otherwise()
+              .setBody(constant("login failed"));
+      //get license id from body
+      //get list of licenses from email in token, check if license belongs to a user
+      //update startDate on license
 
       // Opret fisketegn til brugeren
       // Retuner fisketegn til brugeren
