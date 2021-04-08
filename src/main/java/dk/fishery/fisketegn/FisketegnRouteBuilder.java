@@ -38,8 +38,12 @@ public class FisketegnRouteBuilder extends RouteBuilder {
   @Value("${jwtSecure.key}")
   String jwtKey;
 
+  @Value("${email.password}")
+  String pass;
+
   @Value("${licenseNumber.number}")
   int licenseNumber;
+
 
     @Override
     public void configure() throws Exception {
@@ -92,8 +96,7 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       .type(User.class)
       .to("direct:findOrCreateUser")
 
-      .post("/updateLicense")
-      //.type(User.class)
+      .put("/updateLicense")
       .to("direct:updateLicense")
 
       // TEST
@@ -208,6 +211,14 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       //.to("direct:payment")
       .process(new hashPasswordProcessor())
       // Gem bruger i DB
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) throws Exception {
+          User user = (User) exchange.getIn().getBody();
+          BasicDBObject dbUser = user.getDbObject();
+          exchange.getIn().setBody(dbUser);
+        }
+      })
       .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=insert")
       .process(new generateTokenProcessor())
       .to("direct:createLicense");
@@ -253,6 +264,7 @@ public class FisketegnRouteBuilder extends RouteBuilder {
                 @Override
                 public void process(Exchange exchange) throws Exception {
                   User input = (User) exchange.getProperty("oldBody");
+                  exchange.setProperty("userEmail",input.getEmail());
                   Bson criteria = Filters.eq("email", input.getEmail());
                   exchange.getIn().setHeader(MongoDbConstants.CRITERIA, criteria);
                 }
@@ -272,8 +284,9 @@ public class FisketegnRouteBuilder extends RouteBuilder {
           exchange.getIn().setBody(user);
         }
       })
-
-      .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=save");
+      .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=save")
+      .setProperty("emailPass", constant(pass))
+      .process(new sendEmailProcessor());
 
       from("direct:updateLicense")
               //validate user
@@ -318,6 +331,8 @@ public class FisketegnRouteBuilder extends RouteBuilder {
                   }
                 })
                 .to("mongodb:fisketegnDb?database=Fisketegn&collection=Licenses&operation=save")
+                .setProperty("emailPass", constant(pass))
+                .process(new sendEmailProcessor())
               .otherwise()
               .setBody(constant("login failed"));
       //get license id from body

@@ -1,5 +1,7 @@
 package dk.fishery.fisketegn.model;
 
+import com.mongodb.BasicDBObject;
+
 import java.util.ArrayList;
 
 public class User {
@@ -56,4 +58,21 @@ public class User {
   public void setType(String type) {this.type = type;}
   public String getOldEmail() {return oldEmail;}
   public void setOldEmail(String oldEmail) {this.oldEmail = oldEmail;}
+
+  public BasicDBObject getDbObject(){
+    BasicDBObject user = new BasicDBObject();
+    user.put("cpr", this.cpr);
+    user.put("birthDay", this.birthDay);
+    user.put("birthMonth", this.birthMonth);
+    user.put("birthYear", this.birthYear);
+    user.put("firstName", this.firstName);
+    user.put("lastName", this.lastName);
+    user.put("email", this.email);
+    user.put("address", this.address);
+    user.put("zipCode", this.zipCode);
+    user.put("country", this.country);
+    user.put("password", this.password);
+    user.put("role", this.role);
+    return user;
+  }
 }

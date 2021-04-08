@@ -22,9 +22,8 @@ public class createLicenseProcessor implements org.apache.camel.Processor {
         license.setOriginalStartDate(input.getStartDate());
         license.setHighQuality(input.isHighQuality());
         exchange.setProperty("licenseID", license.getLicenseID());
-        exchange.setProperty("licenseNumber", licesenceNumberCounter);
+        exchange.setProperty("licenseNumber", license.getLicenseNumber());
         exchange.getIn().setBody(license);
         licesenceNumberCounter++;
-
     }
 }

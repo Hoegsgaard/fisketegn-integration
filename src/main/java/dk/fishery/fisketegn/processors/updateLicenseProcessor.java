@@ -26,9 +26,8 @@ public class updateLicenseProcessor implements org.apache.camel.Processor {
             BasicDBObject output = new BasicDBObject(doc);
             String date = new SimpleDateFormat("dd/MM/yyyy").format(new Date());
             output.put("startDate", date);
+            exchange.setProperty("licenseNumber", output.get("licenseNumber"));
             exchange.getIn().setBody(output);
         }
-        // User user = (User) exchange.getIn().getBody();
-        System.out.println("test");
     }
 }

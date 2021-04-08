@@ -1,5 +1,6 @@
 package dk.fishery.fisketegn.processors;
 
+import dk.fishery.fisketegn.model.User;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 
@@ -10,7 +11,8 @@ import javax.mail.internet.*;
 public class sendEmailProcessor implements Processor {
   @Override
   public void process(Exchange exchange) throws Exception {
-    String to = "jupperify@gmail.com";
+    String to = (String) exchange.getProperty("userEmail");
+    String license = (String) exchange.getProperty("licenseNumber");
     String from = "fisketegndtu@gmail.com";
     String password = (String) exchange.getProperty("emailPass");
 
@@ -33,7 +35,8 @@ public class sendEmailProcessor implements Processor {
       message.setFrom(new InternetAddress(from));
       message.addRecipient(Message.RecipientType.TO, new InternetAddress(to));
       message.setSubject("Tillykke med dit fisketegn");
-      message.setText("Dit fisketegnsnummer er #123");
+      message.setText("Dit fisketegnsnummer er " + license);
+      System.out.println("Dit fisketegnsnummer er " + license);
 
       Transport.send(message);
       System.out.println("Sent message successfully....");
