@@ -14,6 +14,7 @@ import org.apache.camel.component.mongodb.MongoDbConstants;
 import org.apache.camel.impl.DefaultCamelContext;
 import org.apache.camel.language.xpath.XPathBuilder;
 import org.apache.camel.model.rest.RestBindingMode;
+import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -37,8 +38,8 @@ public class FisketegnRouteBuilder extends RouteBuilder {
   @Value("${jwtSecure.key}")
   String jwtKey;
 
-  @Value("${email.password}")
-  String pass;
+  @Value("${licenseNumber.number}")
+  int licenseNumber;
 
     @Override
     public void configure() throws Exception {
@@ -68,6 +69,8 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       .component("servlet")
       .bindingMode(RestBindingMode.json)
       .dataFormatProperty("prettyPrint", "true");
+
+
 
 
       rest("/api/").description("dk.fishery.SpringBootStarter Rest")
@@ -209,7 +212,40 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       .process(new generateTokenProcessor())
       .to("direct:createLicense");
 
+      from("direct:getLicenseNumber")
+      .process(
+              new Processor() {
+                @Override
+                public void process(Exchange exchange) throws Exception {
+                  Bson criteria = Filters.exists("licenseNumber");
+                  exchange.getIn().setHeader(MongoDbConstants.CRITERIA, criteria);
+                }
+              })
+      .to("mongodb:fisketegnDb?database=Fisketegn&collection=Licenses&operation=findAll")
+      .process(new Processor() {
+        @Override
+        public void process(Exchange exchange) throws Exception {
+          ArrayList<Document> licenses = (ArrayList<Document>) exchange.getIn().getBody();
+          int maxNumber = -1;
+          for(Document l: licenses){
+            if (Integer.parseInt(l.getString("licenseNumber")) > maxNumber){
+              maxNumber = Integer.parseInt(l.getString("licenseNumber"));
+            }
+          }
+          maxNumber++;
+          licenseNumber = maxNumber;
+          exchange.setProperty("licenseNumber", licenseNumber);
+          System.out.println("sdf");
+        }
+      });
+
+
       from("direct:createLicense")
+      .choice()
+              .when(constant(licenseNumber).isEqualTo(-1))
+              .to("direct:getLicenseNumber")
+              .end()
+
       .process(new createLicenseProcessor())
       .to("mongodb:fisketegnDb?database=Fisketegn&collection=Licenses&operation=insert")
       .process(
@@ -245,40 +281,43 @@ public class FisketegnRouteBuilder extends RouteBuilder {
               .setProperty("licenseID", simple("${body}"))
               .process(new validateTokenProcessor())
               .choice()
-              .when(exchangeProperty("tokenIsValidated").isEqualTo(true))
-              //get user info
-              .process(new Processor() {
-                @Override
-                public void process(Exchange exchange) throws Exception {
-                  String email = (String) exchange.getProperty("userEmail");
-                  Bson criteria = Filters.eq("email", email);
-                  exchange.getIn().setHeader(MongoDbConstants.CRITERIA, criteria);
-                }
-              })
-              .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=findAll")
-              .process(new Processor() {
-                @Override
-                public void process(Exchange exchange) throws Exception {
-                  ArrayList listOfUsers = exchange.getIn().getBody(ArrayList.class);
-                  exchange.setProperty("user", listOfUsers.get(0));
-                  LinkedHashMap<String,String> prop = (LinkedHashMap) exchange.getProperty("licenseID");
-                  String licenseID = prop.get("licenseID");
-                  Bson criteria = Filters.eq("licenseID", licenseID);
-                  exchange.getIn().setHeader(MongoDbConstants.CRITERIA, criteria);
-                }
-              })
-              .to("mongodb:fisketegnDb?database=Fisketegn&collection=Licenses&operation=findAll")
-              .process(new updateLicenseProcessor())
-              .process(new Processor() {
-                @Override
-                public void process(Exchange exchange) throws Exception {
-                  LinkedHashMap<String,String> prop = (LinkedHashMap) exchange.getProperty("licenseID");
-                  String licenseID = prop.get("licenseID");
-                  Bson criteria = Filters.eq("licenseID", licenseID);
-                  exchange.getIn().setHeader(MongoDbConstants.CRITERIA, criteria);
-                }
-              })
-              .to("mongodb:fisketegnDb?database=Fisketegn&collection=Licenses&operation=save")
+                .when(exchangeProperty("tokenIsValidated").isEqualTo(true))
+                //get user info
+                .process(new Processor() {
+                  @Override
+                  public void process(Exchange exchange) throws Exception {
+                    String email = (String) exchange.getProperty("userEmail");
+                    Bson criteria = Filters.eq("email", email);
+                    exchange.getIn().setHeader(MongoDbConstants.CRITERIA, criteria);
+                  }
+                })
+                .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=findAll")
+                //get list of users licenses
+                .process(new Processor() {
+                  @Override
+                  public void process(Exchange exchange) throws Exception {
+                    ArrayList listOfUsers = exchange.getIn().getBody(ArrayList.class);
+                    exchange.setProperty("user", listOfUsers.get(0));
+                    LinkedHashMap<String,String> prop = (LinkedHashMap) exchange.getProperty("licenseID");
+                    String licenseID = prop.get("licenseID");
+                    Bson criteria = Filters.eq("licenseID", licenseID);
+                    exchange.getIn().setHeader(MongoDbConstants.CRITERIA, criteria);
+                  }
+                })
+                .to("mongodb:fisketegnDb?database=Fisketegn&collection=Licenses&operation=findAll")
+                //extract license and update date
+                .process(new updateLicenseProcessor())
+                //insert back into db
+                .process(new Processor() {
+                  @Override
+                  public void process(Exchange exchange) throws Exception {
+                    LinkedHashMap<String,String> prop = (LinkedHashMap) exchange.getProperty("licenseID");
+                    String licenseID = prop.get("licenseID");
+                    Bson criteria = Filters.eq("licenseID", licenseID);
+                    exchange.getIn().setHeader(MongoDbConstants.CRITERIA, criteria);
+                  }
+                })
+                .to("mongodb:fisketegnDb?database=Fisketegn&collection=Licenses&operation=save")
               .otherwise()
               .setBody(constant("login failed"));
       //get license id from body
