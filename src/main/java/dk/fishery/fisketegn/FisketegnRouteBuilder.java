@@ -37,6 +37,9 @@ public class FisketegnRouteBuilder extends RouteBuilder {
   @Value("${jwtSecure.key}")
   String jwtKey;
 
+  @Value("${email.password}")
+  String pass;
+
     @Override
     public void configure() throws Exception {
       CamelContext context = new DefaultCamelContext();
@@ -90,6 +93,10 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       //.type(User.class)
       .to("direct:updateLicense")
 
+      // TEST
+      .post("/email")
+      .to("direct:sendEmail")
+
       // USER
       .put("/user")
       .type(User.class)
@@ -123,6 +130,11 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       .put("refund")
       .to("direct:flagLicense");
 
+
+      // TEST
+      from("direct:sendEmail")
+      .setProperty("emailPass", constant(pass))
+      .process(new sendEmailProcessor());
 
       // Auth Endpoints
       from("direct:validateToken")
@@ -224,6 +236,7 @@ public class FisketegnRouteBuilder extends RouteBuilder {
           exchange.getIn().setBody(user);
         }
       })
+
       .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=save");
 
       from("direct:updateLicense")
