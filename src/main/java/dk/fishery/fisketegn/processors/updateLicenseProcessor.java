@@ -24,20 +24,8 @@ public class updateLicenseProcessor implements org.apache.camel.Processor {
             ArrayList body = (ArrayList) exchange.getIn().getBody();
             Document doc = (Document) body.get(0);
             BasicDBObject output = new BasicDBObject(doc);
-            /*License license = new License();
-            license.setLicenseNumber(doc.getString("licenseNumber"));
-            license.setLicenseID(doc.getString("licenseID"));
-            license.setType(doc.getString("type"));                    System.out.println("asdfadsf");
-
-            license.setOriginalStartDate(doc.getString("originalStartDate"));
-            license.setHighQuality(doc.getBoolean("highQuality"));
-            license.setStatus(doc.getBoolean("status"));
-            license.setDeletedFlag(doc.getBoolean("deletedFlag"));
-            license.setGroupLicenseFlag(doc.getBoolean("groupLicenseFlag"));
-            license.setStartDate(date);*/
             String date = new SimpleDateFormat("dd/MM/yyyy").format(new Date());
             output.put("startDate", date);
-
             exchange.getIn().setBody(output);
         }
         // User user = (User) exchange.getIn().getBody();
