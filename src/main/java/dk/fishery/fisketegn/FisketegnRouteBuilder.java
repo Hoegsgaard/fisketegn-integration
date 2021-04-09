@@ -218,7 +218,7 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       .to("mongodb:fisketegnDb?database=Fisketegn&collection=Licenses&operation=findAll")
       .process(exchange -> {
         ArrayList<Document> licenses = (ArrayList<Document>) exchange.getIn().getBody();
-        int maxNumber = -1;
+        int maxNumber = 54321;
         for(Document l: licenses){
           if (Integer.parseInt(l.getString("licenseNumber")) > maxNumber){
             maxNumber = Integer.parseInt(l.getString("licenseNumber"));
