@@ -8,7 +8,7 @@ import org.bson.conversions.Bson;
 
 import java.util.ArrayList;
 
-public class getLicenseProcessor implements Processor {
+public class GetLicenseProcessor implements Processor {
   @Override
   public void process(Exchange exchange) throws Exception {
     BasicDBObject input = exchange.getIn().getBody(BasicDBObject.class);

@@ -8,7 +8,7 @@ import java.util.Properties;
 import javax.mail.*;
 import javax.mail.internet.*;
 
-public class sendEmailProcessor implements Processor {
+public class SendEmailProcessor implements Processor {
   @Override
   public void process(Exchange exchange) throws Exception {
     String to = (String) exchange.getProperty("userEmail");

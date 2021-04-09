@@ -6,7 +6,7 @@ import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.mindrot.jbcrypt.BCrypt;
 
-public class checkPasswordProcessor implements Processor {
+public class CheckPasswordProcessor implements Processor {
   @Override
   public void process(Exchange exchange) throws Exception {
     BasicDBObject DbUser = exchange.getIn().getBody(BasicDBObject.class);

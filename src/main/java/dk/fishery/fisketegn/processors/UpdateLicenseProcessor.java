@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.LinkedHashMap;
 
-public class updateLicenseProcessor implements org.apache.camel.Processor {
+public class UpdateLicenseProcessor implements org.apache.camel.Processor {
     @Override
     public void process(Exchange exchange) throws Exception {
         LinkedHashMap<String,String> prop = (LinkedHashMap) exchange.getProperty("licenseID");

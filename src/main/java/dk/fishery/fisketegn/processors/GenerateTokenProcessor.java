@@ -12,7 +12,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 
-public class generateTokenProcessor implements Processor {
+public class GenerateTokenProcessor implements Processor {
 
   @Override
   public void process(Exchange exchange) throws Exception {

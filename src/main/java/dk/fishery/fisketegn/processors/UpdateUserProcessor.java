@@ -5,7 +5,7 @@ import dk.fishery.fisketegn.model.User;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 
-public class updateUserProcessor implements Processor {
+public class UpdateUserProcessor implements Processor {
   @Override
   public void process(Exchange exchange) throws Exception {
     BasicDBObject input = exchange.getIn().getBody(BasicDBObject.class);

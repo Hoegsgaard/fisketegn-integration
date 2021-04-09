@@ -7,7 +7,7 @@ import org.apache.camel.Exchange;
 
 import java.util.UUID;
 
-public class createLicenseProcessor implements org.apache.camel.Processor {
+public class CreateLicenseProcessor implements org.apache.camel.Processor {
     private static int licesenceNumberCounter;
     @Override
     public void process(Exchange exchange) throws Exception {

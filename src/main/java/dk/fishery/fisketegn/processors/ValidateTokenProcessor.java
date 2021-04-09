@@ -8,7 +8,7 @@ import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.springframework.beans.factory.annotation.Value;
 
-public class validateTokenProcessor implements Processor {
+public class ValidateTokenProcessor implements Processor {
 
   @Override
   public void process(Exchange exchange) throws Exception {
@@ -23,9 +23,9 @@ public class validateTokenProcessor implements Processor {
       exchange.setProperty("userEmail", jws.getBody().get("id"));
       exchange.setProperty("userRole", jws.getBody().get("role"));
       exchange.setProperty("tokenIsValidated", true);
-    } catch (ExpiredJwtException e) {
+    } catch (Exception e) {
       exchange.getIn().setHeader(Exchange.HTTP_RESPONSE_CODE, 401);
-      exchange.getIn().setBody("Token er ikke ok");
+      exchange.getIn().setBody("Invalid token");
       exchange.setProperty("tokenIsValidated", false);
     }
   }

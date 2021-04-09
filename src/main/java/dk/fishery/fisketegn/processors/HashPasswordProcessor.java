@@ -5,7 +5,7 @@ import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.mindrot.jbcrypt.BCrypt;
 
-public class hashPasswordProcessor implements Processor {
+public class HashPasswordProcessor implements Processor {
   @Override
   public void process(Exchange exchange) throws Exception {
     User user = (User) exchange.getProperty("oldBody");
