@@ -73,7 +73,6 @@ public class FisketegnRouteBuilder extends RouteBuilder {
 
       rest("/api/").description("dk.fishery.SpringBootStarter Rest")
       .id("api-route")
-      .enableCORS(true)
       .produces(MediaType.APPLICATION_JSON)
       .consumes(MediaType.APPLICATION_JSON)
       .bindingMode(RestBindingMode.json);
