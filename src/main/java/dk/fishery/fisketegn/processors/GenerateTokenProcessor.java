@@ -6,6 +6,7 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import io.jsonwebtoken.*;
+import org.apache.camel.util.json.JsonObject;
 import org.springframework.beans.factory.annotation.Value;
 
 import java.time.Instant;
@@ -26,6 +27,10 @@ public class GenerateTokenProcessor implements Processor {
       .signWith(SignatureAlgorithm.HS512, tokenKey)
       .compact();
     exchange.setProperty("userToken", token);
-    exchange.getIn().setBody(token);
+
+    JsonObject body = new JsonObject();
+    body.put("token", token);
+
+    exchange.getIn().setBody(body);
   }
 }

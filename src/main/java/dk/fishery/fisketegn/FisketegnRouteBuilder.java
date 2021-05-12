@@ -167,12 +167,10 @@ public class FisketegnRouteBuilder extends RouteBuilder {
               .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
             .otherwise()
               .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
-              .setBody(simple("Incorrect username or password"))
           .endChoice()
         .otherwise()
           .log("Bruger eksistere endnu ikke")
-          .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
-          .setBody(simple("Incorrect username or password"));
+          .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400));
 
       // FIND OR CREATE USER
       //maybe use doesUserExist
