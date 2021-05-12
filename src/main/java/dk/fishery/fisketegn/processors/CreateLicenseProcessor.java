@@ -4,6 +4,7 @@ import com.mongodb.BasicDBObject;
 import dk.fishery.fisketegn.model.License;
 import dk.fishery.fisketegn.model.User;
 import org.apache.camel.Exchange;
+import org.apache.camel.util.json.JsonObject;
 
 import java.util.UUID;
 
@@ -24,6 +25,11 @@ public class CreateLicenseProcessor implements org.apache.camel.Processor {
         exchange.setProperty("licenseID", license.getLicenseID());
         exchange.setProperty("licenseNumber", license.getLicenseNumber());
         exchange.getIn().setBody(license);
+        JsonObject json = new JsonObject();
+        json.put("licenseNumber", license.getLicenseNumber());
+        json.put("type", license.getType());
+        json.put("startDate", license.getStartDate());
+        exchange.setProperty("license",json);
         licesenceNumberCounter++;
     }
 }

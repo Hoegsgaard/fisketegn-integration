@@ -166,11 +166,11 @@ public class FisketegnRouteBuilder extends RouteBuilder {
               .process(new GenerateTokenProcessor())
               .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
             .otherwise()
-              .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
+              .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
           .endChoice()
         .otherwise()
           .log("Bruger eksistere endnu ikke")
-          .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400));
+          .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401));
 
       // FIND OR CREATE USER
       //maybe use doesUserExist
@@ -254,7 +254,8 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=save")
       .setProperty("emailPass", constant(pass))
       //send receipt by email
-      .process(new SendEmailProcessor());
+      .process(new SendEmailProcessor())
+      .setBody(exchangeProperty("license"));
 
       //Update date on an existing license
       from("direct:updateLicense")
@@ -288,7 +289,10 @@ public class FisketegnRouteBuilder extends RouteBuilder {
                 })
                 .to("mongodb:fisketegnDb?database=Fisketegn&collection=Licenses&operation=save")
                 .setProperty("emailPass", constant(pass))
-                .process(new SendEmailProcessor());
+                .process(new SendEmailProcessor())
+                .setBody(exchangeProperty("license"))
+              .otherwise()
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401));
 
       // User endpoints
       // UPDATE USER
@@ -308,7 +312,9 @@ public class FisketegnRouteBuilder extends RouteBuilder {
           .setProperty("newUser", simple("${body}"))
           .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=save")
           .setBody(exchangeProperty("newUser"))
-          .process(new GenerateTokenProcessor());
+          .process(new GenerateTokenProcessor())
+      .otherwise()
+          .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401));
 
       // GET USER
       from("direct:getUser")
@@ -326,7 +332,9 @@ public class FisketegnRouteBuilder extends RouteBuilder {
             user.removeField("role");
             user.removeField("_id");
             exchange.getIn().setBody(user);
-          });
+          })
+          .otherwise()
+            .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401));
 
         // DELETE USER
         from("direct:deleteUser")
@@ -350,7 +358,9 @@ public class FisketegnRouteBuilder extends RouteBuilder {
                 .setBody(simple("User deleted"))
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
             .otherwise()
-                .setBody(simple("User do not exsist"))
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
+            .endChoice()
+            .otherwise()
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401));
 
       from("direct:disableLicenses")
@@ -383,7 +393,9 @@ public class FisketegnRouteBuilder extends RouteBuilder {
           .process(new UpdatePasswordProcessor())
           .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=save")
           .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
-          .setBody(simple("Password is updated"));
+          .setBody(simple("Password is updated"))
+      .otherwise()
+          .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401));
 
       //get licenses of one user
         from("direct:getLicense")
@@ -413,17 +425,22 @@ public class FisketegnRouteBuilder extends RouteBuilder {
                         for(int i = 0; i < licensesList.size(); i++){
                             BasicDBObject license = new BasicDBObject(licensesList.get(i));
                             license.removeField("_id");
+                            license.removeField("licenceID");
+                            license.removeField("highQuality");
+                            license.removeField("originalStartDate");
+                            license.removeField("groupLicenseFlag");
                             licensesList.set(i, license);
                         }
                     exchange.getIn().setBody(licensesList);
                     })
                 .otherwise()
-                    .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
-                    .setBody(simple("Endnu ingen fisketegn"))
+                    .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
                 .endChoice()
             .otherwise()
-                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
-                .setBody(simple("Kunne ikke finde bruger"));
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
+            .endChoice()
+            .otherwise()
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401));
 
       // Admin Endpoints
       // GET USER
@@ -444,41 +461,38 @@ public class FisketegnRouteBuilder extends RouteBuilder {
             user.removeField("_id");
             exchange.getIn().setBody(user);
           })
-          .otherwise()
-          .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
-          .setBody(simple("access denied"));
-
-      // UPDATE USER
-      from("direct:adminUpdateUser")
-      //validate user
-      .setProperty("tokenKey", constant(jwtKey))
-      .process(new ValidateTokenProcessor())
-      .choice()
-        .when(PredicateBuilder.and(exchangeProperty("tokenIsValidated").isEqualTo(true), exchangeProperty("userRole").isEqualTo("admin")))
-          //get user object from database
-          .process(exchange -> {
-            User user = exchange.getIn().getBody(User.class);
-            exchange.setProperty("user", user);
-            exchange.setProperty("usersEmail", user.getOldEmail());
-          })
-          .setBody(exchangeProperty("user"))
-          .process(new PrepareUserDBstatementProcessor())
-      .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=findAll")
-      .choice()
-        .when(header(RESULT_PAGE_SIZE).isGreaterThan(0))
-          //update local user object according to body and reinsert into database.
-          .process(new UpdateUserProcessor())
-          .setProperty("newUser", simple("${body}"))
-          .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=save")
-          .process(new AdminSendUserProcessor())
-          .setBody(exchangeProperty("newUser"))
         .otherwise()
-          .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
-          .setBody(simple("Kunne ikke finde bruger"))
-           .endChoice()
-          .otherwise()
-          .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
-          .setBody(simple("access denied"));
+          .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401));
+
+        // UPDATE USER
+        from("direct:adminUpdateUser")
+        //validate user
+        .setProperty("tokenKey", constant(jwtKey))
+        .process(new ValidateTokenProcessor())
+        .choice()
+        .when(PredicateBuilder.and(exchangeProperty("tokenIsValidated").isEqualTo(true), exchangeProperty("userRole").isEqualTo("admin")))
+            //get user object from database
+            .process(exchange -> {
+                User user = exchange.getIn().getBody(User.class);
+                exchange.setProperty("user", user);
+                exchange.setProperty("usersEmail", user.getOldEmail());
+            })
+            .setBody(exchangeProperty("user"))
+            .process(new PrepareUserDBstatementProcessor())
+            .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=findAll")
+            .choice()
+            .when(header(RESULT_PAGE_SIZE).isGreaterThan(0))
+                //update local user object according to body and reinsert into database.
+                .process(new UpdateUserProcessor())
+                .setProperty("newUser", simple("${body}"))
+                .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=save")
+                .process(new AdminSendUserProcessor())
+                .setBody(exchangeProperty("newUser"))
+            .otherwise()
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
+            .endChoice()
+        .otherwise()
+        .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401));
 
         //UPDATE ROLE
         from("direct:adminUpdateUserRole")
@@ -499,12 +513,10 @@ public class FisketegnRouteBuilder extends RouteBuilder {
                     .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=save")
                     .process(new AdminSendUserProcessor())
                 .otherwise()
-                    .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
-                    .setBody(simple("Kunne ikke finde bruger"))
+                    .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
                 .endChoice()
             .otherwise()
-                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
-                .setBody(simple("access denied"));
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401));
 
         //FLAG LICENSE DELETED
         from("direct:flagLicense")
@@ -526,11 +538,9 @@ public class FisketegnRouteBuilder extends RouteBuilder {
                 .process(new FlagLicenseDeletedProcessor())
                 .to("mongodb:fisketegnDb?database=Fisketegn&collection=Licenses&operation=save")
             .otherwise()
-                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
-                .setBody(simple("Kunne ikke finde fisketegn"))
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
             .endChoice()
         .otherwise()
-            .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
-            .setBody(simple("access denied"));
+            .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401));
     }
 }

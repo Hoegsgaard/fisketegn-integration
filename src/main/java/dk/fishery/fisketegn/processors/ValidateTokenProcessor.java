@@ -24,8 +24,6 @@ public class ValidateTokenProcessor implements Processor {
       exchange.setProperty("userRole", jws.getBody().get("role"));
       exchange.setProperty("tokenIsValidated", true);
     } catch (Exception e) {
-      exchange.getIn().setHeader(Exchange.HTTP_RESPONSE_CODE, 401);
-      exchange.getIn().setBody("Invalid token");
       exchange.setProperty("tokenIsValidated", false);
     }
   }

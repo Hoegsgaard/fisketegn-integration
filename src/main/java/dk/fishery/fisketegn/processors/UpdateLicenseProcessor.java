@@ -4,6 +4,7 @@ import com.mongodb.BasicDBObject;
 import dk.fishery.fisketegn.model.License;
 import dk.fishery.fisketegn.model.User;
 import org.apache.camel.Exchange;
+import org.apache.camel.util.json.JsonObject;
 import org.bson.Document;
 
 import java.text.SimpleDateFormat;
@@ -28,6 +29,11 @@ public class UpdateLicenseProcessor implements org.apache.camel.Processor {
             output.put("startDate", date);
             exchange.setProperty("licenseNumber", output.get("licenseNumber"));
             exchange.getIn().setBody(output);
+            JsonObject json = new JsonObject();
+            json.put("licenseNumber", output.get("licenseNumber"));
+            json.put("type", output.get("type"));
+            json.put("startDate", output.get("startDate"));
+            exchange.setProperty("license", json);
         }
     }
 }
