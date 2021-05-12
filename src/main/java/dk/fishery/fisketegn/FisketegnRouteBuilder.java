@@ -341,14 +341,32 @@ public class FisketegnRouteBuilder extends RouteBuilder {
             .when(header(RESULT_PAGE_SIZE).isGreaterThan(0))
                 .process(exchange -> {
                 BasicDBObject user = exchange.getIn().getBody(BasicDBObject.class);
+                exchange.setProperty("licenseIDs", user.get("licenses"));
+                exchange.setProperty("user",user);
                 exchange.getIn().setBody(user);
                 })
                 .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=remove")
+                .to("direct:disableLicenses")
                 .setBody(simple("User deleted"))
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
             .otherwise()
                 .setBody(simple("User do not exsist"))
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401));
+
+      from("direct:disableLicenses")
+      .setBody(exchangeProperty("user"))
+      .process(new GetLicenseProcessor())
+      .process(exchange -> {
+          ArrayList<Bson> bsons = (ArrayList<Bson>) exchange.getProperty("bsons");
+          Bson criteria = Filters.or(bsons);
+          exchange.getIn().setHeader(MongoDbConstants.CRITERIA, criteria);
+      })
+      .to("mongodb:fisketegnDb?database=Fisketegn&collection=Licenses&operation=findAll")
+      .choice()
+      .when(header(RESULT_PAGE_SIZE).isGreaterThan(0))
+      //trim fields from licenses the user shouldn't see.
+      .process(new prepareLicenseDisableDBstatementProcessor())
+      .to("mongodb:fisketegnDb?database=Fisketegn&collection=Licenses&operation=update");
 
       // UPDATE PASSWORD
       from("direct:updatePassword")
