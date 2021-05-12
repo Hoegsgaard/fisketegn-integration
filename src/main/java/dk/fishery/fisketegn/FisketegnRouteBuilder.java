@@ -169,7 +169,6 @@ public class FisketegnRouteBuilder extends RouteBuilder {
               .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
           .endChoice()
         .otherwise()
-          .log("Bruger eksistere endnu ikke")
           .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401));
 
       // FIND OR CREATE USER
@@ -186,11 +185,16 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       .when(header(RESULT_PAGE_SIZE).isGreaterThan(0))
       .setProperty("newUser", simple("${body}"))
       //Bruger eksisterer
-      .process(new GenerateTokenProcessor())
+      .process(new CheckPasswordProcessor())
+      .choice()
+        .when(exchangeProperty("userAuth").isEqualTo(true))
       // .to("direct:payment")
-       .to("direct:createLicense")
+      .to("direct:createLicense")
       .otherwise()
-      //.log("Bruger eksistere endnu ikke")
+          .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
+      .endChoice()
+      .otherwise()
+      //.log("Bruger eksisterer endnu ikke")
       .to("direct:createUser");
 
       from("direct:createUser")
@@ -199,6 +203,7 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       // Gem bruger i DB
       .process(exchange -> {
         User user = (User) exchange.getIn().getBody();
+        user.setRole("user");
         BasicDBObject dbUser = user.getDbObject();
         exchange.getIn().setBody(dbUser);
       })
