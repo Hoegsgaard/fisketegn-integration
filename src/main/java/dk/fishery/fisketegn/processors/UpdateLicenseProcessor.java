@@ -8,6 +8,9 @@ import org.apache.camel.util.json.JsonObject;
 import org.bson.Document;
 
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.LinkedHashMap;
@@ -25,8 +28,19 @@ public class UpdateLicenseProcessor implements org.apache.camel.Processor {
             ArrayList body = (ArrayList) exchange.getIn().getBody();
             Document doc = (Document) body.get(0);
             BasicDBObject output = new BasicDBObject(doc);
-            String date = new SimpleDateFormat("dd/MM/yyyy").format(new Date());
-            output.put("startDate", date);
+            DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+            LocalDate endDate;
+            endDate = LocalDate.parse(output.getString("endDate"),dtf);
+
+            if(output.get("type").equals("d")){
+                endDate = endDate.plusDays(1);
+            }else if(output.get("type").equals("w")){
+                endDate = endDate.plusDays(7);
+            }else if(output.get("type").equals("y")){
+                endDate = endDate.plusDays(365);
+            }
+            output.put("endDate", endDate.format(dtf));
+
             exchange.setProperty("licenseNumber", output.get("licenseNumber"));
             exchange.getIn().setBody(output);
             JsonObject json = new JsonObject();

@@ -6,9 +6,12 @@ public class License {
     private String type; //"d" = day, "w" = week, "y" = year, "l" = fritidsfisketegn
     private boolean highQuality;
     private String startDate;
+    private String endDate;
     private String originalStartDate;
     private boolean status; //true = active, false = inactive
     private boolean deletedFlag = false;
+    private boolean groupLicenseFlag;
+
 
     public String getLicenseID() {
         return licenseID;
@@ -81,6 +84,12 @@ public class License {
     public void setGroupLicenseFlag(boolean groupLicenseFlag) {
         this.groupLicenseFlag = groupLicenseFlag;
     }
+    public String getEndDate() {
+        return endDate;
+    }
 
-    private boolean groupLicenseFlag;
+    public void setEndDate(String endDate) {
+        this.endDate = endDate;
+    }
+
 }
