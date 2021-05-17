@@ -9,6 +9,7 @@ import org.apache.camel.builder.PredicateBuilder;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mongodb.MongoDbConstants;
 import org.apache.camel.model.rest.RestBindingMode;
+import org.apache.camel.util.json.JsonObject;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.springframework.beans.factory.annotation.Value;
@@ -192,6 +193,7 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       .choice()
         .when(exchangeProperty("userAuth").isEqualTo(true))
       // .to("direct:payment")
+      .process(new GenerateTokenProcessor())
       .to("direct:createLicense")
       .otherwise()
           .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
@@ -263,7 +265,15 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       .setProperty("emailPass", constant(pass))
       //send receipt by email
       .process(new SendEmailProcessor())
-      .setBody(exchangeProperty("license"));
+      .process(new Processor() {
+          @Override
+          public void process(Exchange exchange) throws Exception {
+              JsonObject json = new JsonObject();
+              json.put("license", exchange.getProperty("license"));
+              json.put("token", exchange.getProperty("userToken"));
+              exchange.getIn().setBody(json);
+          }
+      });
 
       //Update date on an existing license
       from("direct:updateLicense")
