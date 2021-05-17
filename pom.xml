@@ -77,6 +77,19 @@
             <groupId>org.apache.camel</groupId>
             <artifactId>camel-swagger-java-starter</artifactId>
         </dependency>
+
+
+
+        <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-quartz2-starter</artifactId>
+            <version>3.0.0-M4</version>
+            <!-- use the same version as your Camel core version -->
+        </dependency>
+
+
+
+
         <dependency>
             <groupId>org.apache.camel</groupId>
             <artifactId>camel-mongodb</artifactId>
@@ -103,6 +116,16 @@
             <artifactId>javax.mail</artifactId>
             <version>1.6.2</version>
         </dependency>
+
+
+        <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-quartz</artifactId>
+            <version>2.13.0</version>
+            <!-- use the same version as your Camel core version -->
+        </dependency>
+
+
 
         <!--<dependency>
             <groupId>org.mongodb</groupId>

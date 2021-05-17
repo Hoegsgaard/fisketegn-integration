@@ -15,6 +15,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import javax.ws.rs.core.MediaType;
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 
@@ -380,6 +383,8 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       .choice()
       .when(header(RESULT_PAGE_SIZE).isGreaterThan(0))
       //trim fields from licenses the user shouldn't see.
+      .setProperty("flagToChange", constant("deletedFlag"))
+      .setProperty("flagValue", constant(true))
       .process(new prepareLicenseDisableDBstatementProcessor())
       .to("mongodb:fisketegnDb?database=Fisketegn&collection=Licenses&operation=update");
 
@@ -547,5 +552,25 @@ public class FisketegnRouteBuilder extends RouteBuilder {
             .endChoice()
         .otherwise()
             .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401));
+
+
+        //from("quartz2:testTimer?cron=0+0+0+?+*+*+*")//Trigger at midnight every day, use for prod.
+        from("quartz2:testTimer?cron=0+*+*+?+*+*")//Trigger every minute, use for test/dev.
+        .log("cronjob triggered")
+        .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+                Bson criteria = Filters.eq("status", true);
+                exchange.getIn().setHeader(MongoDbConstants.CRITERIA, criteria);
+            }
+        })
+        .to("mongodb:fisketegnDb?database=Fisketegn&collection=Licenses&operation=findAll")
+        .process(new GetExpiredLicensesProcessor())
+        .choice()
+            .when(exchangeProperty("LicensesToDisable").isEqualTo(true))
+            .setProperty("flagToChange", constant("status"))
+            .setProperty("flagValue", constant(false))
+            .process(new prepareLicenseDisableDBstatementProcessor())
+            .to("mongodb:fisketegnDb?database=Fisketegn&collection=Licenses&operation=update");
     }
 }
