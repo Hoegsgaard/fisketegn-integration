@@ -12,6 +12,7 @@ import org.apache.camel.model.rest.RestBindingMode;
 import org.apache.camel.util.json.JsonObject;
 import org.bson.Document;
 import org.bson.conversions.Bson;
+import org.mindrot.jbcrypt.BCrypt;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import javax.ws.rs.core.MediaType;
@@ -410,11 +411,25 @@ public class FisketegnRouteBuilder extends RouteBuilder {
           //get user from database
           .process(new PrepareUserDBstatementProcessor())
           .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=findAll")
-          //change password and reinsert into database
-          .process(new UpdatePasswordProcessor())
-          .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=save")
-          .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
-          .setBody(simple("Password is updated"))
+          // Check old password i korrect
+          .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+              BasicDBObject DbUser = exchange.getIn().getBody(BasicDBObject.class);
+              boolean passwordIsCorrect = BCrypt.checkpw((String) exchange.getProperty("oldPassword"), DbUser.getString("password"));
+              exchange.setProperty("userAuth", passwordIsCorrect);
+            }
+          })
+          .choice()
+            .when(exchangeProperty("userAuth").isEqualTo(true))
+              //change password and reinsert into database
+              .process(new UpdatePasswordProcessor())
+              .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=save")
+              .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
+              .setBody(simple("Password is updated"))
+          .otherwise()
+            .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
+          .endChoice()
       .otherwise()
           .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401));
 
