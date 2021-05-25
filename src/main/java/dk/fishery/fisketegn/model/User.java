@@ -7,9 +7,6 @@ import java.util.ArrayList;
 public class User {
 
   private String cpr;
-  private String birthDay;
-  private String birthMonth;
-  private String birthYear;
   private String firstName;
   private String lastName;
   private String email;
@@ -26,12 +23,6 @@ public class User {
 
   public String getCpr() {return cpr;}
   public void setCpr(String cpr) {this.cpr = cpr;}
-  public String getBirthDay() {return birthDay;}
-  public void setBirthDay(String birthDay) {this.birthDay = birthDay;}
-  public String getBirthMonth() {return birthMonth;}
-  public void setBirthMonth(String birthMonth) {this.birthMonth = birthMonth;}
-  public String getBirthYear() {return birthYear;}
-  public void setBirthYear(String birthYear) {this.birthYear = birthYear;}
   public String getFirstName() {return firstName;}
   public void setFirstName(String firstName) {this.firstName = firstName;}
   public String getLastName() {return lastName;}
@@ -62,9 +53,6 @@ public class User {
   public BasicDBObject getDbObject(){
     BasicDBObject user = new BasicDBObject();
     user.put("cpr", this.cpr);
-    user.put("birthDay", this.birthDay);
-    user.put("birthMonth", this.birthMonth);
-    user.put("birthYear", this.birthYear);
     user.put("firstName", this.firstName);
     user.put("lastName", this.lastName);
     user.put("email", this.email);
