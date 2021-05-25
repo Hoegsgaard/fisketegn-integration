@@ -11,9 +11,6 @@ public class UpdateUserProcessor implements Processor {
     BasicDBObject input = exchange.getIn().getBody(BasicDBObject.class);
     User newUserInfo = (User) exchange.getProperty("user");
     input.put("cpr",newUserInfo.getCpr());
-    input.put("birthDay",newUserInfo.getBirthDay());
-    input.put("birthMonth",newUserInfo.getBirthMonth());
-    input.put("birthYear",newUserInfo.getBirthYear());
     input.put("firstName",newUserInfo.getFirstName());
     input.put("lastName", newUserInfo.getLastName());
     input.put("email",newUserInfo.getEmail());

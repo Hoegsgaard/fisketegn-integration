@@ -325,7 +325,7 @@ public class FisketegnRouteBuilder extends RouteBuilder {
           .process(exchange -> exchange.getIn().setBody(exchange.getProperty("user")))
           .process(new PrepareUserDBstatementProcessor())
           .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=findAll")
-          //update info on user object and reinstart into database
+          //update info on user object and reinsert into database
           .process(new UpdateUserProcessor())
           .setProperty("newUser", simple("${body}"))
           .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=save")
@@ -564,8 +564,8 @@ public class FisketegnRouteBuilder extends RouteBuilder {
             .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401));
 
 
-        //from("quartz2:testTimer?cron=0+0+0+?+*+*+*")//Trigger at midnight every day, use for prod.
-        from("quartz2:testTimer?cron=0+*+*+?+*+*")//Trigger every minute, use for test/dev.
+        from("quartz2:testTimer?cron=0+0+0+?+*+*+*")//Trigger at midnight every day, use for prod.
+        //from("quartz2:testTimer?cron=0+*+*+?+*+*")//Trigger every minute, use for test/dev.
         .log("cronjob triggered")
         .process(new Processor() {
             @Override
