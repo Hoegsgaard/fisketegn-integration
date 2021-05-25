@@ -273,7 +273,8 @@ public class FisketegnRouteBuilder extends RouteBuilder {
               json.put("token", exchange.getProperty("userToken"));
               exchange.getIn().setBody(json);
           }
-      });
+      })
+      .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200));
 
       //Update date on an existing license
       from("direct:updateLicense")
