@@ -128,7 +128,7 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       // Admin
       rest("/api/admin/")
 
-      .get("/User")
+      .post("/getUser")
       .to("direct:adminGetUser")
 
       .put("/User")
@@ -492,7 +492,7 @@ public class FisketegnRouteBuilder extends RouteBuilder {
         .endChoice();
 
       // Admin Endpoints
-      // GET USER
+      // POST GETUSER
       from("direct:adminGetUser")
       //validate user
       .setProperty("tokenKey", constant(jwtKey))
@@ -503,13 +503,19 @@ public class FisketegnRouteBuilder extends RouteBuilder {
           //get user from database (not the logged in user, but the user the admin wants to get) and trim fields the admin shouldn't see.
           .process(new GetUserProcessor())
           .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=findAll")
-          .process(exchange -> {
-            BasicDBObject user = exchange.getIn().getBody(BasicDBObject.class);
-            user.removeField("password");
-            user.removeField("role");
-            user.removeField("_id");
-            exchange.getIn().setBody(user);
-          })
+
+          .choice()
+            .when(header(RESULT_PAGE_SIZE).isGreaterThan(0))
+              .process(exchange -> {
+                BasicDBObject user = exchange.getIn().getBody(BasicDBObject.class);
+                user.removeField("password");
+                user.removeField("role");
+                user.removeField("_id");
+                exchange.getIn().setBody(user);
+              })
+            .otherwise()
+              .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
+              .endChoice()
         .otherwise()
           .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401));
 
