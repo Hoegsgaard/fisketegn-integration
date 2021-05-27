@@ -509,7 +509,6 @@ public class FisketegnRouteBuilder extends RouteBuilder {
               .process(exchange -> {
                 BasicDBObject user = exchange.getIn().getBody(BasicDBObject.class);
                 user.removeField("password");
-                user.removeField("role");
                 user.removeField("_id");
                 exchange.getIn().setBody(user);
               })
