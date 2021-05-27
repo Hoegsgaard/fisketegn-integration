@@ -139,7 +139,10 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       .to("direct:adminUpdateUserRole")
 
       .put("refund")
-      .to("direct:flagLicense");
+      .to("direct:flagLicense")
+
+      .post("getLicenses")
+      .to("direct:getLicenses");
 
 
       // TEST
@@ -450,40 +453,43 @@ public class FisketegnRouteBuilder extends RouteBuilder {
             //get user from database
             .process(new PrepareUserDBstatementProcessor())
             .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=findAll")
-            .choice()
-            .when(header(RESULT_PAGE_SIZE).isGreaterThan(0))
-                //Retrieve list of licenseID's from user, and retrieve those licenses from database
-                .process(new GetLicenseProcessor())
-                .process(exchange -> {
-                ArrayList<Bson> bsons = (ArrayList<Bson>) exchange.getProperty("bsons");
-                Bson criteria = Filters.or(bsons);
-                exchange.getIn().setHeader(MongoDbConstants.CRITERIA, criteria);
-                })
-                .to("mongodb:fisketegnDb?database=Fisketegn&collection=Licenses&operation=findAll")
                 .choice()
                 .when(header(RESULT_PAGE_SIZE).isGreaterThan(0))
-                    //trim fields from licenses the user shouldn't see.
-                    .process(exchange -> {
-                        ArrayList<BasicDBObject> licensesList = exchange.getIn().getBody(ArrayList.class);
-                        for(int i = 0; i < licensesList.size(); i++){
-                            BasicDBObject license = new BasicDBObject(licensesList.get(i));
-                            license.removeField("_id");
-                            license.removeField("licenceID");
-                            license.removeField("highQuality");
-                            license.removeField("originalStartDate");
-                            license.removeField("groupLicenseFlag");
-                            licensesList.set(i, license);
-                        }
-                    exchange.getIn().setBody(licensesList);
-                    })
+                //Retrieve list of licenseID's from user, and retrieve those licenses from database
+                .to("direct:getLicensesFromDB")
                 .otherwise()
-                    .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
                 .endChoice()
             .otherwise()
-                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
-            .endChoice()
-            .otherwise()
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401));
+
+        from("direct:getLicensesFromDB")
+        .process(new GetLicenseProcessor())
+        .process(exchange -> {
+            ArrayList<Bson> bsons = (ArrayList<Bson>) exchange.getProperty("bsons");
+            Bson criteria = Filters.or(bsons);
+            exchange.getIn().setHeader(MongoDbConstants.CRITERIA, criteria);
+        })
+        .to("mongodb:fisketegnDb?database=Fisketegn&collection=Licenses&operation=findAll")
+        .choice()
+        .when(header(RESULT_PAGE_SIZE).isGreaterThan(0))
+        //trim fields from licenses the user shouldn't see.
+        .process(exchange -> {
+            ArrayList<BasicDBObject> licensesList = exchange.getIn().getBody(ArrayList.class);
+            for(int i = 0; i < licensesList.size(); i++){
+                BasicDBObject license = new BasicDBObject(licensesList.get(i));
+                license.removeField("_id");
+                license.removeField("licenceID");
+                license.removeField("highQuality");
+                license.removeField("originalStartDate");
+                license.removeField("groupLicenseFlag");
+                licensesList.set(i, license);
+            }
+            exchange.getIn().setBody(licensesList);
+        })
+        .otherwise()
+        .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
+        .endChoice();
 
       // Admin Endpoints
       // GET USER
@@ -588,6 +594,28 @@ public class FisketegnRouteBuilder extends RouteBuilder {
                 .to("mongodb:fisketegnDb?database=Fisketegn&collection=Licenses&operation=save")
             .otherwise()
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
+            .endChoice()
+        .otherwise()
+            .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401));
+
+        //ADMIN GET USERS LICENSES
+        from("direct:getLicenses")
+        .setProperty("tokenKey", constant(jwtKey))
+        .process(new ValidateTokenProcessor())
+        .choice()
+            .when(PredicateBuilder.and(exchangeProperty("tokenIsValidated").isEqualTo(true), exchangeProperty("userRole").isEqualTo("admin")))
+            //get license from database
+            .process(new SavePropertyProcessor())
+            .process(new GetUserProcessor())
+            .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=findAll")
+            .choice()
+            .when(header(RESULT_PAGE_SIZE).isGreaterThan(0))
+                .to("direct:getLicensesFromDB")
+            .otherwise()
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
+            .endChoice()
+            .otherwise()
+            .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
             .endChoice()
         .otherwise()
             .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401));
