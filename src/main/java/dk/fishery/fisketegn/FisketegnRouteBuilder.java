@@ -488,7 +488,7 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       .choice()
         .when(PredicateBuilder.and(exchangeProperty("tokenIsValidated").isEqualTo(true), exchangeProperty("userRole").isEqualTo("admin")))
           //get user from database (not the logged in user, but the user the admin wants to get) and trim fields the admin shouldn't see.
-          .process(new PrepareUserDBstatementProcessor())
+          .process(new GetUserProcessor())
           .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=findAll")
           .process(exchange -> {
             BasicDBObject user = exchange.getIn().getBody(BasicDBObject.class);
@@ -514,7 +514,7 @@ public class FisketegnRouteBuilder extends RouteBuilder {
                 exchange.setProperty("usersEmail", user.getOldEmail());
             })
             .setBody(exchangeProperty("user"))
-            .process(new PrepareUserDBstatementProcessor())
+            .process(new GetUserProcessor())
             .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=findAll")
             .choice()
             .when(header(RESULT_PAGE_SIZE).isGreaterThan(0))
@@ -528,6 +528,12 @@ public class FisketegnRouteBuilder extends RouteBuilder {
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
             .endChoice()
         .otherwise()
+        .process(new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+                System.out.println("sdgsdfg");
+            }
+        })
         .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401));
 
         //UPDATE ROLE
@@ -539,7 +545,7 @@ public class FisketegnRouteBuilder extends RouteBuilder {
             .when(PredicateBuilder.and(exchangeProperty("tokenIsValidated").isEqualTo(true), exchangeProperty("userRole").isEqualTo("admin")))
                 //get user from database
                 .process(new SavePropertyProcessor())
-                .process(new PrepareUserDBstatementProcessor())
+                .process(new GetUserProcessor())
                 .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=findAll")
                 .choice()
                 .when(header(RESULT_PAGE_SIZE).isGreaterThan(0))
