@@ -149,8 +149,15 @@ public class FisketegnRouteBuilder extends RouteBuilder {
 
       // Auth Endpoints
       from("direct:validateToken")
+      .streamCaching()
       .setProperty("tokenKey", constant(jwtKey))
-      .process(new ValidateTokenProcessor());
+      .process(new ValidateTokenProcessor())
+      .choice()
+        .when(exchangeProperty("tokenIsValidated").isEqualTo(true))
+          .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
+        .otherwise()
+          .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
+      ;
 
       //Used for logging in users
       from("direct:doesUserExist")
