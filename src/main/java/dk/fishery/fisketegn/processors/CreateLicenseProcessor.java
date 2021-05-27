@@ -47,7 +47,7 @@ public class CreateLicenseProcessor implements org.apache.camel.Processor {
             endDate = oldDate.plusDays(1);
         }else if(type.equals("w")){
             endDate = oldDate.plusDays(7);
-        }else if(type.equals("y")){
+        }else if(type.equals("y") || type.equals("f")){
             endDate = oldDate.plusDays(365);
         }
 
