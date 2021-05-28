@@ -23,7 +23,7 @@ public class GenerateTokenProcessor implements Processor {
       .claim("id", user.getString("email"))
       .claim("role", user.getString("role"))
       .setIssuedAt(Date.from(Instant.now()))
-      .setExpiration(Date.from(Instant.now().plus(15, ChronoUnit.MINUTES)))
+      .setExpiration(Date.from(Instant.now().plus(2, ChronoUnit.HOURS)))
       .signWith(SignatureAlgorithm.HS512, tokenKey)
       .compact();
     exchange.setProperty("userToken", token);
