@@ -12,5 +12,5 @@ buildNumber.properties
 
 # Java stuff
 .idea
-#fisketegn-integration.iml
+fisketegn-integration.iml
 #src/main/resources/application.yml
