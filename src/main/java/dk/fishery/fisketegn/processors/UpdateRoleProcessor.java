@@ -1,7 +1,6 @@
 package dk.fishery.fisketegn.processors;
 
 import com.mongodb.BasicDBObject;
-import dk.fishery.fisketegn.model.User;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 

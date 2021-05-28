@@ -14,8 +14,8 @@ public class GetLicenseProcessor implements Processor {
     BasicDBObject input = exchange.getIn().getBody(BasicDBObject.class);
     ArrayList licensesList = (ArrayList) input.get("licenses");
     ArrayList<Bson> bsons = new ArrayList<>();
-    for (int i = 0; i < licensesList.size(); i++) {
-      bsons.add(Filters.eq("licenseID", licensesList.get(i)));
+    for (Object o : licensesList) {
+      bsons.add(Filters.eq("licenseID", o));
     }
     exchange.setProperty("bsons", bsons);
   }

@@ -4,7 +4,6 @@ import com.mongodb.BasicDBObject;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.mindrot.jbcrypt.BCrypt;
-import java.util.LinkedHashMap;
 
 public class UpdatePasswordProcessor implements Processor {
   @Override

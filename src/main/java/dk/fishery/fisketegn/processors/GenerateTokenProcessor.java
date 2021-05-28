@@ -1,14 +1,11 @@
 package dk.fishery.fisketegn.processors;
 
 import com.mongodb.BasicDBObject;
-import dk.fishery.fisketegn.model.User;
 import io.jsonwebtoken.SignatureAlgorithm;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import io.jsonwebtoken.*;
 import org.apache.camel.util.json.JsonObject;
-import org.springframework.beans.factory.annotation.Value;
-
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;

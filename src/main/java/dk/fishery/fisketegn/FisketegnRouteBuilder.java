@@ -17,12 +17,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import javax.ws.rs.core.MediaType;
 import java.io.IOException;
-import java.time.LocalDate;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
-
 import static org.apache.camel.component.mongodb.MongoDbConstants.RESULT_PAGE_SIZE;
 
 @Component
@@ -43,10 +39,8 @@ public class FisketegnRouteBuilder extends RouteBuilder {
   @Value("${licenseNumber.number}")
   int licenseNumber;
 
-
     @Override
     public void configure() {
-      //CamelContext context = new DefaultCamelContext();
 
       onException(IOException.class)
               .log("IOException")
@@ -58,7 +52,6 @@ public class FisketegnRouteBuilder extends RouteBuilder {
               .handled(true)
               .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
               .setBody(simple("camel exception"));
-
 
       restConfiguration()
       .contextPath(contextPath)
@@ -72,9 +65,6 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       .component("servlet")
       .bindingMode(RestBindingMode.json)
       .dataFormatProperty("prettyPrint", "true");
-
-
-
 
       rest("/api/").description("dk.fishery.SpringBootStarter Rest")
       .id("api-route")
@@ -144,7 +134,6 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       .post("getLicenses")
       .to("direct:getLicenses");
 
-
       // TEST
       from("direct:sendEmail")
       .setProperty("emailPass", constant(pass))
@@ -159,8 +148,7 @@ public class FisketegnRouteBuilder extends RouteBuilder {
         .when(exchangeProperty("tokenIsValidated").isEqualTo(true))
           .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
         .otherwise()
-          .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
-      ;
+          .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401));
 
       //Used for logging in users
       from("direct:doesUserExist")
@@ -187,7 +175,6 @@ public class FisketegnRouteBuilder extends RouteBuilder {
           .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401));
 
       // FIND OR CREATE USER
-      //maybe use doesUserExist
       from("direct:findOrCreateUser")
       .streamCaching()
       .routeId("findOrCreateUser")
@@ -210,7 +197,7 @@ public class FisketegnRouteBuilder extends RouteBuilder {
           .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
       .endChoice()
       .otherwise()
-      //.log("Bruger eksisterer endnu ikke")
+      //Bruger eksisterer endnu ikke
       .to("direct:createUser");
 
       from("direct:createUser")
@@ -276,53 +263,50 @@ public class FisketegnRouteBuilder extends RouteBuilder {
       .setProperty("emailPass", constant(pass))
       //send receipt by email
       .process(new SendEmailProcessor())
-      .process(new Processor() {
-          @Override
-          public void process(Exchange exchange) throws Exception {
-              JsonObject json = new JsonObject();
-              json.put("license", exchange.getProperty("license"));
-              json.put("token", exchange.getProperty("userToken"));
-              exchange.getIn().setBody(json);
-          }
+      .process(exchange -> {
+          JsonObject json = new JsonObject();
+          json.put("license", exchange.getProperty("license"));
+          json.put("token", exchange.getProperty("userToken"));
+          exchange.getIn().setBody(json);
       })
       .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200));
 
       //Update date on an existing license
       from("direct:updateLicense")
-              //validate user
-              .setProperty("tokenKey", constant(jwtKey))
-              .setProperty("licenseID", simple("${body}"))
-              .process(new ValidateTokenProcessor())
-              .choice()
-                .when(exchangeProperty("tokenIsValidated").isEqualTo(true))
-                //get user info
-                .process(new PrepareUserDBstatementProcessor())
-                .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=findAll")
-                //get list of users licenses
-                .process(exchange -> {
-                  ArrayList listOfUsers = exchange.getIn().getBody(ArrayList.class);
-                  exchange.setProperty("user", listOfUsers.get(0));
-                  LinkedHashMap<String,String> prop = (LinkedHashMap) exchange.getProperty("licenseID");
-                  String licenseID = prop.get("licenseID");
-                  Bson criteria = Filters.eq("licenseID", licenseID);
-                  exchange.getIn().setHeader(MongoDbConstants.CRITERIA, criteria);
-                })
-                .to("mongodb:fisketegnDb?database=Fisketegn&collection=Licenses&operation=findAll")
-                //extract license and update date
-                .process(new UpdateLicenseProcessor())
-                //insert back into db
-                .process(exchange -> {
-                  LinkedHashMap<String,String> prop = (LinkedHashMap) exchange.getProperty("licenseID");
-                  String licenseID = prop.get("licenseID");
-                  Bson criteria = Filters.eq("licenseID", licenseID);
-                  exchange.getIn().setHeader(MongoDbConstants.CRITERIA, criteria);
-                })
-                .to("mongodb:fisketegnDb?database=Fisketegn&collection=Licenses&operation=save")
-                .setProperty("emailPass", constant(pass))
-                .process(new SendEmailProcessor())
-                .setBody(exchangeProperty("license"))
-              .otherwise()
-                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401));
+      //validate user
+      .setProperty("tokenKey", constant(jwtKey))
+      .setProperty("licenseID", simple("${body}"))
+      .process(new ValidateTokenProcessor())
+      .choice()
+        .when(exchangeProperty("tokenIsValidated").isEqualTo(true))
+        //get user info
+        .process(new PrepareUserDBstatementProcessor())
+        .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=findAll")
+        //get list of users licenses
+        .process(exchange -> {
+          ArrayList listOfUsers = exchange.getIn().getBody(ArrayList.class);
+          exchange.setProperty("user", listOfUsers.get(0));
+          LinkedHashMap<String,String> prop = (LinkedHashMap) exchange.getProperty("licenseID");
+          String licenseID = prop.get("licenseID");
+          Bson criteria = Filters.eq("licenseID", licenseID);
+          exchange.getIn().setHeader(MongoDbConstants.CRITERIA, criteria);
+        })
+        .to("mongodb:fisketegnDb?database=Fisketegn&collection=Licenses&operation=findAll")
+        //extract license and update date
+        .process(new UpdateLicenseProcessor())
+        //insert back into db
+        .process(exchange -> {
+          LinkedHashMap<String,String> prop = (LinkedHashMap) exchange.getProperty("licenseID");
+          String licenseID = prop.get("licenseID");
+          Bson criteria = Filters.eq("licenseID", licenseID);
+          exchange.getIn().setHeader(MongoDbConstants.CRITERIA, criteria);
+        })
+        .to("mongodb:fisketegnDb?database=Fisketegn&collection=Licenses&operation=save")
+        .setProperty("emailPass", constant(pass))
+        .process(new SendEmailProcessor())
+        .setBody(exchangeProperty("license"))
+      .otherwise()
+        .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401));
 
       // User endpoints
       // UPDATE USER
@@ -422,13 +406,10 @@ public class FisketegnRouteBuilder extends RouteBuilder {
           .process(new PrepareUserDBstatementProcessor())
           .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=findAll")
           // Check old password i korrect
-          .process(new Processor() {
-            @Override
-            public void process(Exchange exchange) throws Exception {
-              BasicDBObject DbUser = exchange.getIn().getBody(BasicDBObject.class);
-              boolean passwordIsCorrect = BCrypt.checkpw((String) exchange.getProperty("oldPassword"), DbUser.getString("password"));
-              exchange.setProperty("userAuth", passwordIsCorrect);
-            }
+          .process(exchange -> {
+            BasicDBObject DbUser = exchange.getIn().getBody(BasicDBObject.class);
+            boolean passwordIsCorrect = BCrypt.checkpw((String) exchange.getProperty("oldPassword"), DbUser.getString("password"));
+            exchange.setProperty("userAuth", passwordIsCorrect);
           })
           .choice()
             .when(exchangeProperty("userAuth").isEqualTo(true))
@@ -547,12 +528,6 @@ public class FisketegnRouteBuilder extends RouteBuilder {
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
             .endChoice()
         .otherwise()
-        .process(new Processor() {
-            @Override
-            public void process(Exchange exchange) throws Exception {
-                System.out.println("sdgsdfg");
-            }
-        })
         .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401));
 
         //UPDATE ROLE
@@ -626,16 +601,12 @@ public class FisketegnRouteBuilder extends RouteBuilder {
         .otherwise()
             .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401));
 
-
         from("quartz2:testTimer?cron=0+0+0+?+*+*+*")//Trigger at midnight every day, use for prod.
         //from("quartz2:testTimer?cron=0+*+*+?+*+*")//Trigger every minute, use for test/dev.
         .log("cronjob triggered")
-        .process(new Processor() {
-            @Override
-            public void process(Exchange exchange) throws Exception {
-                Bson criteria = Filters.eq("status", true);
-                exchange.getIn().setHeader(MongoDbConstants.CRITERIA, criteria);
-            }
+        .process(exchange -> {
+            Bson criteria = Filters.eq("status", true);
+            exchange.getIn().setHeader(MongoDbConstants.CRITERIA, criteria);
         })
         .to("mongodb:fisketegnDb?database=Fisketegn&collection=Licenses&operation=findAll")
         .process(new GetExpiredLicensesProcessor())
