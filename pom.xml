@@ -15,6 +15,7 @@
         <camel.version>3.0.0-M4</camel.version>
         <java.version>1.8</java.version>
         <spring.boot.version>2.4.2</spring.boot.version>
+        <start-class>dk.fishery.fisketegn.SpringBootStarter</start-class>
     </properties>
 
     <dependencyManagement>
@@ -135,7 +136,21 @@
     </dependencies>
 
     <build>
-        <defaultGoal>spring-boot:run</defaultGoal>
+        <!--<defaultGoal>spring-boot:run</defaultGoal>-->
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>1.1.2.RELEASE</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
 
        <!--<plugins>
             <plugin>
