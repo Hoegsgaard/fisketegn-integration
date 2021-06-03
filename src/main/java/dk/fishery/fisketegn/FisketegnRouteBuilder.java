@@ -600,8 +600,8 @@ public class FisketegnRouteBuilder extends RouteBuilder {
         .otherwise()
             .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401));
 
-        from("quartz2:testTimer?cron=0+0+0+?+*+*+*")//Trigger at midnight every day, use for prod.
-        //from("quartz2:testTimer?cron=0+*+*+?+*+*")//Trigger every minute, use for test/dev.
+        //from("quartz2:testTimer?cron=0+0+0+?+*+*+*")//Trigger at midnight every day, use for prod.
+        from("quartz2:testTimer?cron=0+*+*+?+*+*")//Trigger every minute, use for test/dev.
         .log("cronjob triggered")
         .process(exchange -> {
             Bson criteria = Filters.eq("status", true);
