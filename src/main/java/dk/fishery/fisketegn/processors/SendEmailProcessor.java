@@ -4,6 +4,7 @@ import dk.fishery.fisketegn.model.User;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.camel.util.json.JsonObject;
+import org.bson.Document;
 
 import java.util.Properties;
 import javax.mail.*;
@@ -15,6 +16,9 @@ public class SendEmailProcessor implements Processor {
     String to = (String) exchange.getProperty("userEmail");
     JsonObject license = (JsonObject) exchange.getProperty("license");
     User user = (User) exchange.getProperty("oldBody");
+    if(user==null){
+      user = new User((Document) exchange.getProperty("user"));
+    }
     String from = "fisketegndtu@gmail.com";
     String password = (String) exchange.getProperty("emailPass");
     Properties prop = new Properties();

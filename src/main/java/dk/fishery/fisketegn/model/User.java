@@ -1,6 +1,7 @@
 package dk.fishery.fisketegn.model;
 
 import com.mongodb.BasicDBObject;
+import org.bson.Document;
 
 import java.util.ArrayList;
 
@@ -49,6 +50,23 @@ public class User {
   public void setType(String type) {this.type = type;}
   public String getOldEmail() {return oldEmail;}
   public void setOldEmail(String oldEmail) {this.oldEmail = oldEmail;}
+
+  public User(){
+
+  }
+
+  public User(Document input){
+    this.cpr = input.getString("cpr");
+    this.firstName = input.getString("firstName");
+    this.lastName = input.getString("lastName");
+    this.email = input.getString("email");
+    this.address = input.getString("address");
+    this.zipCode = input.getString("zipCode");
+    this.country = input.getString("country");
+    this.password = input.getString("password");
+    this.role = input.getString("role");
+    this.licenses = (ArrayList<String>) input.get("licenses");
+  }
 
   public BasicDBObject getDbObject(){
     BasicDBObject user = new BasicDBObject();

@@ -321,12 +321,17 @@ public class FisketegnRouteBuilder extends RouteBuilder {
           .process(exchange -> exchange.getIn().setBody(exchange.getProperty("user")))
           .process(new PrepareUserDBstatementProcessor())
           .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=findAll")
-          //update info on user object and reinsert into database
-          .process(new UpdateUserProcessor())
-          .setProperty("newUser", simple("${body}"))
-          .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=save")
-          .setBody(exchangeProperty("newUser"))
-          .process(new GenerateTokenProcessor())
+          .choice()
+          .when(header(RESULT_PAGE_SIZE).isGreaterThan(0))
+              //update info on user object and reinsert into database
+              .process(new UpdateUserProcessor())
+              .setProperty("newUser", simple("${body}"))
+              .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=save")
+              .setBody(exchangeProperty("newUser"))
+              .process(new GenerateTokenProcessor())
+          .otherwise()
+            .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
+          .endChoice()
       .otherwise()
           .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401));
 
@@ -340,13 +345,18 @@ public class FisketegnRouteBuilder extends RouteBuilder {
           //get user from database and trim fields the user shouldn't see.
           .process(new PrepareUserDBstatementProcessor())
           .to("mongodb:fisketegnDb?database=Fisketegn&collection=Users&operation=findAll")
-          .process(exchange -> {
-            BasicDBObject user = exchange.getIn().getBody(BasicDBObject.class);
-            user.removeField("password");
-            user.removeField("role");
-            user.removeField("_id");
-            exchange.getIn().setBody(user);
-          })
+          .choice()
+          .when(header(RESULT_PAGE_SIZE).isGreaterThan(0))
+              .process(exchange -> {
+                BasicDBObject user = exchange.getIn().getBody(BasicDBObject.class);
+                user.removeField("password");
+                user.removeField("role");
+                user.removeField("_id");
+                exchange.getIn().setBody(user);
+              })
+          .otherwise()
+          .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
+          .endChoice()
           .otherwise()
             .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401));
 
